@@ -112,7 +112,7 @@ class Snake:
 
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take the new last coordinates
         self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1], batch=window.batch,
-                                                     group=self.group_count))  # add new snake_body to the snake_field
+                                                     group=pyglet.graphics.OrderGroup(self.group_count)))  # add new snake_body to the snake_field
 
         self.group_count += 1  # HUGELY INEFFICIENT!
         """ According to docs you don't wanna have too many OrderGroups,
