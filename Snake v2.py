@@ -93,6 +93,8 @@ class Snake:
         self.label = pyglet.text.Label('{}'.format(self.food_count-3), font_size=540, color=(255, 255, 255, 25))  # score label
         self.game_state = 1  # indication if you are alive or dead
 
+        self.group_count = 0  # to set OrderGroups
+
     def start(self):
 
         for i in range(16):  # creates the starting snake TODO block size matters
@@ -109,7 +111,13 @@ class Snake:
                                   last_in_circle[1] + self.last_step_direction[1]))  # append a new one acording to last_step_direction
 
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take the new last coordinates
-        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1], batch=window.batch))  # add new snake_body to the snake_field
+        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1], batch=window.batch,
+                                                     group=self.group_count))  # add new snake_body to the snake_field
+
+        self.group_count += 1  # HUGELY INEFFICIENT!
+        """ According to docs you don't wanna have too many OrderGroups,
+        but I need to hate it here in order to later design 'skins' for the snake 
+        it makes the application hugely inefficient in a bit though... """
 
     def take_snake_body(self):  # pop the last snake body and coordinates
         self.circle_field.pop(0)
