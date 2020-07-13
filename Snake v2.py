@@ -14,7 +14,7 @@ class Window(pyglet.window.Window):
     def __init__(self):
         super().__init__(1200, 800)
         self.set_caption("Snake v2")
-        self.set_vsync(False)  # My snake wouldn't move fast enought without that
+        self.set_vsync(False)  # My snake wouldn't move fast enought without this
         self.set_mouse_visible(True)
         self.active_window = 1
 
@@ -40,7 +40,9 @@ class Window(pyglet.window.Window):
         if self.active_window == 0:
             self.active_window = 1
             self.play.label = pyglet.text.Label('{}'.format(self.play.food_count - 3), font_size=540, color=(255, 255, 255, 25))  # just reset the pause
-            pyglet.clock.schedule_interval(self.play.move, move_time)
+
+            if self.play.game_state == 1:
+                pyglet.clock.schedule_interval(self.play.move, move_time)
 
     def on_deactivate(self):  # just to pause the game if you click elsewhere
         self.active_window = 0
@@ -66,6 +68,8 @@ class Window(pyglet.window.Window):
 class Menu:
     def __init__(self):
         """ There should be created and called menu """
+        self.datas = Data()
+
         # window.set_mouse_visible(True)
         # window.play.game_state = -1
 
@@ -73,6 +77,29 @@ class Menu:
 class Data:
     def __init__(self):
         """ This should save best scores and whatever else is needed """
+        self.data = self.read_data()
+
+    @staticmethod
+    def read_data():
+        try:
+            with open("Sources/dat.txt", "r") as file:
+                return file.readlines()
+
+        except FileNotFoundError:
+            with open("Sources/dat.txt", "w") as file:
+                template = ["a\n", "0\n", "b\n", "0\n", "c\n", "0\n", "d\n", "0\n"]
+                for i in template:
+                    file.write(i)
+
+    def write_data(self, difficulty, score):  # maybe we can add time or player later
+        position = self.data.index(difficulty + "\n")
+
+        if int(self.data[position+1].strip("\n")) < score:
+            self.data[position+1] = str(score) + "\n"
+
+            with open("Sources/dat.txt", "w") as file:
+                for i in range(len(self.data)):
+                    file.write(self.data[i])
 
 
 class Snake:
@@ -111,13 +138,9 @@ class Snake:
                                   last_in_circle[1] + self.last_step_direction[1]))  # append a new one acording to last_step_direction
 
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take the new last coordinates
-        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1], batch=window.batch,
-                                                     group=pyglet.graphics.OrderGroup(self.group_count)))  # add new snake_body to the snake_field
+        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1], batch=window.batch))  # add new snake_body to the snake_field
 
-        self.group_count += 1  # HUGELY INEFFICIENT!
-        """ According to docs you don't wanna have too many OrderGroups,
-        but I need to hate it here in order to later design 'skins' for the snake 
-        it makes the application hugely inefficient in a bit though... """
+        # self.group_count += 1  # HUGELY INEFFICIENT!  group=pyglet.graphics.OrderedGroup(self.group_count)
 
     def take_snake_body(self):  # pop the last snake body and coordinates
         self.circle_field.pop(0)
@@ -183,11 +206,13 @@ class Snake:
             self.take_snake_body()
 
         self.update_main_batch()
-        print(self.food_count, ":", pyglet.clock.get_fps())  # performance check
+        if pyglet.clock.get_fps() < 200:
+            print(self.food_count, ":", pyglet.clock.get_fps())  # performance check
 
     def loss(self):  # what if you lose
         pyglet.clock.unschedule(self.move)
         self.game_state = 0
+        window.menu.datas.write_data("a", self.food_count - 3)  # for now it's "a", later this should refer to difficulty
         window.set_mouse_visible(True)
         print("You died!")  # TODO make it appear on the screen
 
