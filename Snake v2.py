@@ -92,7 +92,7 @@ class Data:
 
     def read_data(self):
         try:
-            with open("Sources/dat.txt", "r") as file:
+            with open("common/dat.txt", "r") as file:
                 return file.readlines()
 
         # if you start the snake for the first time
@@ -125,7 +125,7 @@ class Data:
 
     @staticmethod
     def add_new_account(account_name):
-        with open("Sources/dat.txt", "a") as file:
+        with open("common/dat.txt", "a") as file:
             template = ["account\n", "{}\n".format(account_name),
                         "easy\n", "0\n", "normal\n", "0\n", "hard\n", "0\n", "impossible\n", "0\n",
                         "playtime\n", "0\n", "games\n", "0\n" "snakies\n", "0\n",
@@ -138,14 +138,14 @@ class Data:
     def store_data_addition(self, position, new_value):
         self.data[position] = str(int(self.data[position].strip("\n")) + new_value) + "\n"
 
-        with open("Sources/dat.txt", "w") as file:
+        with open("common/dat.txt", "w") as file:
             for i in self.data:
                 file.write(i)
 
     def store_data_append(self, position, new_value):
         self.data[position] = self.data[position].strip("\n") + ", " + str(new_value) + "\n"
 
-        with open("Sources/dat.txt", "w") as file:
+        with open("common/dat.txt", "w") as file:
             for i in self.data:
                 file.write(i)
 
@@ -155,7 +155,7 @@ class Data:
         if int(self.data[position+1].strip("\n")) < score:
             self.data[position+1] = str(score) + "\n"
 
-            with open("Sources/dat.txt", "w") as file:
+            with open("common/dat.txt", "w") as file:
                 for i in self.data:
                     file.write(i)
 
@@ -320,10 +320,10 @@ if __name__ == '__main__':
     snake = Snake()
 
     """ This will be moved to Menu() later in order to provide in-menu changes to this """
-    grid = pyglet.resource.image('Sources/snake_grid.png')
-    body = pyglet.resource.image('Sources/snake_v2_basic.png')
-    food = pyglet.resource.image('Sources/snake_food.png')
-    lose_sign = pyglet.resource.image('Sources/snake_lose.png')  # TODO not in place yet
+    body = pyglet.resource.image('textures/body/basic.png')
+    food = pyglet.resource.image('textures/food/basic.png')
+    grid = pyglet.resource.image('textures/interface/grid.png')
+    lose_sign = pyglet.resource.image('textures/interface/lose_sign.png')
 
     center_image(body), center_image(food), center_image(lose_sign)
     grid, lose_sign = pyglet.sprite.Sprite(grid, x=1, y=0), pyglet.sprite.Sprite(lose_sign)
