@@ -1,0 +1,18 @@
+account                     set once, the name of the player
+easy_best                   rewritten only if the new one is bigger, best score in given difficulty
+normal_best                 -\\-
+hard_best                   -\\-
+impossible_best             -\\-
+easy_games                  add one every time this difficulty is played, game counter
+normal_games                -\\-
+hard_games                  -\\-
+impossible_games            -\\-
+easy_food                   add food eaten in game, total food counter
+normal_food                 -\\-
+hard_food                   -\\-
+impossible_food             -\\-
+playtime                    add time played before death, total playtime in-game
+snakies                     add after game, game currency
+bodies                      add if new bought, owned skins
+foods                       add if new bought, owned food skins
+backgrounds                 add if new bought, owned backgrounds

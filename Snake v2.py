@@ -50,26 +50,19 @@ class Window(pyglet.window.Window):
             grid.draw()
             self.batch.draw()
 
+            if self.active_window == 0:
+                pause.draw()
+
         elif self.screen_function == "Options":
             pass
 
         elif self.screen_function == "Shop":
             pass
 
-    # def on_activate(self):  # just to pause the game if you click elsewhere
-    #     if self.active_window == 0 and self.screen_function == "Snake":
-    #         self.active_window = 1
-    #         snake.label = pyglet.text.Label('{}'.format(snake.food_count - 3), font_size=540, color=(255, 255, 255, 25))  # just reset the pause
-    #
-    #         print("on_activate activated")
-    #         if snake.game_state == 1:
-    #             pyglet.clock.schedule_interval(snake.move, snake.move_time)
-    #
-    # def on_deactivate(self):  # just to pause the game if you click elsewhere
-    #     if self.screen_function == "Snake":
-    #         self.active_window = 0
-    #         snake.label = pyglet.text.Label('PAUSE', font_size=265, color=(255, 255, 255, 25), x=0, y=268)  # just a pause
-    #         pyglet.clock.unschedule(snake.move)
+    def on_deactivate(self):  # just to pause the game if you click elsewhere
+        if self.screen_function == "Snake" and snake.game_state == 1:
+            self.active_window = 0
+            pyglet.clock.unschedule(snake.move)
 
     def on_key_press(self, symbol, modifiers):  # TODO more functions
         if self.screen_function == "Snake":
@@ -92,7 +85,7 @@ class Data:
 
     def read_data(self):
         try:
-            with open("common/dat.txt", "r") as file:
+            with open("common/statistics.dat", "r") as file:
                 return file.readlines()
 
         # if you start the snake for the first time
@@ -125,39 +118,34 @@ class Data:
 
     @staticmethod
     def add_new_account(account_name):
-        with open("common/dat.txt", "a") as file:
-            template = ["account\n", "{}\n".format(account_name),
-                        "easy\n", "0\n", "normal\n", "0\n", "hard\n", "0\n", "impossible\n", "0\n",
-                        "playtime\n", "0\n", "games\n", "0\n" "snakies\n", "0\n",
-                        "bodies\n", "0\n", "foods\n", "0\n", "backgrounds\n", "0\n"]
+        with open("common/statistics.dat", "a") as file:
+            template = [
+                        "{}\n".format(account_name),
+                        "0\n", "0\n", "0\n", "0\n",
+                        "0\n", "0\n", "0\n", "0\n",
+                        "0\n", "0\n", "0\n", "0\n"
+                        "0\n", "0\n",
+                        "0\n", "0\n", "0\n"
+                        ]
             for i in template:
                 file.write(i)
 
             return template
 
-    def store_data_addition(self, position, new_value):
+    def write_data_addition(self, position, new_value):
         self.data[position] = str(int(self.data[position].strip("\n")) + new_value) + "\n"
 
-        with open("common/dat.txt", "w") as file:
-            for i in self.data:
-                file.write(i)
-
-    def store_data_append(self, position, new_value):
+    def write_data_append(self, position, new_value):
         self.data[position] = self.data[position].strip("\n") + ", " + str(new_value) + "\n"
 
-        with open("common/dat.txt", "w") as file:
+    def write_data_score(self, position, score):
+        if int(self.data[position]) < score:
+            self.data[position] = str(score) + "\n"
+
+    def store_data(self):
+        with open("common/statistics.dat", "w") as file:
             for i in self.data:
                 file.write(i)
-
-    def store_data_score(self, difficulty, score):
-        position = self.data.index(difficulty + "\n")
-
-        if int(self.data[position+1].strip("\n")) < score:
-            self.data[position+1] = str(score) + "\n"
-
-            with open("common/dat.txt", "w") as file:
-                for i in self.data:
-                    file.write(i)
 
 
 class Snake:
@@ -165,7 +153,7 @@ class Snake:
         """ There should be the game itself """
         self.food_count = 3
         self.time_played = 0
-        self.difficulty = "normal"  # this will be changed by Menu()
+        self.difficulty = 1  # this will be changed by Menu(); 0 - easy, 1 - normal, 2 - hard, 3 - impossible
         self.move_time = 0.015  # this as well
 
         self.growth = 0  # indication if the snake should grow
@@ -270,9 +258,12 @@ class Snake:
     def loss(self):  # what if you lose
         pyglet.clock.unschedule(self.move)
         self.game_state = 0
-        menu.data.store_data_addition(11, int(self.time_played))
-        menu.data.store_data_addition(13, 1)
-        menu.data.store_data_score(self.difficulty, self.food_count - 3)
+        menu.data.write_data_score(1 + self.difficulty, self.food_count - 3)  # best score
+        menu.data.write_data_addition(5 + self.difficulty, 1)  # games played
+        menu.data.write_data_addition(9 + self.difficulty, self.food_count - 3)  # food eaten
+        menu.data.write_data_addition(13, int(self.time_played))  # playtime
+        # TODO in-game currency
+        menu.data.store_data()
         window.set_mouse_visible(True)
         print("You died!")  # TODO make it appear on the screen
 
@@ -296,13 +287,11 @@ class Snake:
 
             if symbol == key.ESCAPE and window.active_window == 1:
                 window.active_window = 0
-                self.label = pyglet.text.Label('PAUSE', font_size=265, color=(255, 255, 255, 25), x=0, y=268)  # just a pause
                 window.set_mouse_visible(True)
                 pyglet.clock.unschedule(snake.move)
 
             elif symbol == key.ESCAPE and window.active_window == 0:
                 window.active_window = 1
-                self.label = pyglet.text.Label('{}'.format(snake.food_count - 3), font_size=540, color=(255, 255, 255, 25))  # just reset the pause
                 window.set_mouse_visible(False)
 
                 if snake.game_state == 1:
@@ -323,10 +312,11 @@ if __name__ == '__main__':
     body = pyglet.resource.image('textures/body/basic.png')
     food = pyglet.resource.image('textures/food/basic.png')
     grid = pyglet.resource.image('textures/interface/grid.png')
+    pause = pyglet.resource.image('textures/interface/pause.png')
     lose_sign = pyglet.resource.image('textures/interface/lose_sign.png')
 
     center_image(body), center_image(food), center_image(lose_sign)
-    grid, lose_sign = pyglet.sprite.Sprite(grid, x=1, y=0), pyglet.sprite.Sprite(lose_sign)
+    grid, pause, lose_sign = pyglet.sprite.Sprite(grid, x=1, y=0), pyglet.sprite.Sprite(pause, x=0, y=0), pyglet.sprite.Sprite(lose_sign)
     grid.opacity = 25
 
     window.call_snake()  # TODO should be called from Menu() later
