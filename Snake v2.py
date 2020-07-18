@@ -13,7 +13,7 @@ class Window(pyglet.window.Window):
     def __init__(self):
         super().__init__(1200, 800)
         self.set_caption("Snake v2")
-        self.set_vsync(False)  # My snake wouldn't move fast enough without this
+        self.set_vsync(False)
         self.set_mouse_visible(True)
         self.active_window = 1
 
@@ -23,7 +23,7 @@ class Window(pyglet.window.Window):
         self.main_batch = []
 
     """ These should be called to initiate a different window """
-    def call_menu(self):  # TODO should be called after you die
+    def call_menu(self):
         self.screen_function = "Menu"
 
     def call_snake(self):
@@ -47,7 +47,7 @@ class Window(pyglet.window.Window):
         if self.screen_function == "Menu":
             blank.draw()
             menu_left.draw()
-            menu_arrow1.draw()
+            menu_arrow_1.object.draw()
 
             if menu.play_state:
                 menu_difficulty.draw()
@@ -62,8 +62,8 @@ class Window(pyglet.window.Window):
                 pause.draw()
 
             if snake.game_state == 0:
-                death.draw()
-                death_desc.draw()
+                death.object.draw()
+                death_desc.object.draw()
 
         elif self.screen_function == "Options":
             pass
@@ -95,65 +95,55 @@ class Window(pyglet.window.Window):
             menu.keyboard_function(symbol)
 
 
-class Menu:  # TODO Menu()
+class Menu:
     def __init__(self):
         """ There should be created and called menu """
         self.play_state = False
         self.highlighted_option = 0
         self.time = 0
         self.last_difficulty = -1
+        self.last_highlighted_option = 0
 
         # snake.game_state = -1
 
     def play(self):
         self.highlighted_option = 1
         menu_arrow2.position = (800, 500)
-        pyglet.clock.schedule_interval(self.rotate1, 0.01)
+        menu_arrow_1.prepare_animation(amount=10)
+        pyglet.clock.schedule_interval(menu_arrow_1.rotate, menu_arrow_1.call_time)
 
         self.play_state = True
-
-    def rotate1(self, dt):
-        menu_arrow1.rotation += 10
-        self.time += 1
-        if self.time >= 6:
-            pyglet.clock.unschedule(self.rotate1)
-
-    def rotate2(self, dt):
-        menu_arrow1.rotation -= 10
-        self.time -= 1
-        if self.time <= 0:
-            pyglet.clock.unschedule(self.rotate2)
 
     def snake_time(self, difficulty):
         snake.difficulty = difficulty
 
         self.__init__()
-        menu_arrow1.rotation = 180
+        menu_arrow_1.object.rotation = 180
         window.call_snake()
 
     def mouse_function(self, x, y, button):
         # """ if in menu and not clicked anything yet """
         if not self.play_state:
             if 0 < x < 356 and 360 < y < 440:
-                menu_arrow1.position = (377, 405)
+                menu_arrow_1.object.position = (377, 405)
                 self.highlighted_option = 0
                 if button == mouse.LEFT:
                     self.play()
 
             elif 0 < x < 356 and 260 < y < 340:
-                menu_arrow1.position = (377, 300)
+                menu_arrow_1.object.position = (377, 300)
                 self.highlighted_option = 1
                 if button == mouse.LEFT:
                     window.call_shop()
 
             elif 0 < x < 356 and 150 < y < 230:
-                menu_arrow1.position = (377, 195)
+                menu_arrow_1.object.position = (377, 195)
                 self.highlighted_option = 2
                 if button == mouse.LEFT:
                     window.call_stats()
 
             elif 0 < x < 356 and 40 < y < 120:
-                menu_arrow1.position = (377, 90)
+                menu_arrow_1.object.position = (377, 90)
                 self.highlighted_option = 3
                 if button == mouse.LEFT:
                     window.call_options()
@@ -186,7 +176,8 @@ class Menu:  # TODO Menu()
 
             # """ if clicked back on the left """
             if 0 < x < 356 and 0 < y < 440 and button == mouse.LEFT:
-                pyglet.clock.schedule_interval(self.rotate2, 0.01)
+                menu_arrow_1.prepare_animation(amount=-10)
+                pyglet.clock.schedule_interval(menu_arrow_1.rotate, menu_arrow_1.call_time)
                 self.play_state = False
                 self.highlighted_option = 0
 
@@ -205,12 +196,12 @@ class Menu:  # TODO Menu()
             elif symbol == key.UP:
                 if self.highlighted_option > 0:
                     self.highlighted_option -= 1
-                    menu_arrow1.y += 105
+                    menu_arrow_1.object.y += 105
 
             elif symbol == key.DOWN:
                 if self.highlighted_option < 3:
                     self.highlighted_option += 1
-                    menu_arrow1.y -= 105
+                    menu_arrow_1.object.y -= 105
 
             elif symbol == key.SPACE and self.last_difficulty != -1:
                 self.snake_time(self.last_difficulty)
@@ -239,7 +230,8 @@ class Menu:  # TODO Menu()
                     menu_arrow2.y -= 95
 
             elif symbol == key.LEFT:
-                pyglet.clock.schedule_interval(self.rotate2, 0.01)
+                menu_arrow_1.prepare_animation(amount=-10)
+                pyglet.clock.schedule_interval(menu_arrow_1.rotate, menu_arrow_1.call_time)
                 self.play_state = False
                 self.highlighted_option = 0
 
@@ -339,6 +331,43 @@ class Data:
                 file.write(i)
 
 
+class Animation:
+    def __init__(self, path, cordx, cordy, call_time=0.0, duration=0.0, amount=0, center=True):
+        self.object = pyglet.resource.image(path)
+        if center:
+            # noinspection PyTypeChecker
+            center_image(self.object)
+        self.object = pyglet.sprite.Sprite(self.object, x=cordx, y=cordy)
+
+        self.time = 0  # keeps track of how long we were doing an animation
+        self.call_time = call_time  # how often will pyglet call a function
+        self.duration = duration  # total time an animation should take
+        self.amount = amount  # an amount given to an object every pyglet call
+
+    def prepare_animation(self, amount=None, duration=None):
+        if amount is not None:
+            self.amount = amount
+        if duration is not None:
+            self.duration = duration
+
+    def rotate(self, dt):
+        self.object.rotation += self.amount
+        self.time += self.call_time
+        if self.time >= self.duration:
+            pyglet.clock.unschedule(self.rotate)
+            self.time = 0
+
+    def fade(self, dt):
+        self.object.opacity += self.amount
+        self.time += self.call_time
+        if self.time >= self.duration:
+            pyglet.clock.unschedule(self.fade)
+            self.time = 0
+
+    def appear(self, dt):
+        self.object.opacity = self.amount
+
+
 class Snake:
     def __init__(self):
         """ There should be the game itself """
@@ -358,7 +387,8 @@ class Snake:
         self.new_step_direction = (10, 0)  # what is the new direction player gave TODO block size matters
         self.last_step_direction = (10, 0)  # where the snake moved last time TODO block size matters
 
-        self.label = pyglet.text.Label('{}'.format(self.food_count-3), font_size=540, color=(255, 255, 255, 25))  # score label
+        self.label = pyglet.text.Label('{}'.format(self.food_count-3),
+                                       font_size=540, color=(255, 255, 255, 25))  # score label
         self.game_state = -1  # indication if you are alive or dead
         self.time_in_fade = 0
 
@@ -375,22 +405,24 @@ class Snake:
         self.update_main_batch()
         window.set_mouse_visible(False)
 
-        death.opacity, death_desc.opacity = 0, 0  # just to reset death screen
+        death.object.opacity, death_desc.object.opacity = 0, 0  # just to reset death screen
 
     def add_snake_body(self):
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take last coordinates of snake body
         self.circle_field.append((last_in_circle[0] + self.last_step_direction[0],
-                                  last_in_circle[1] + self.last_step_direction[1]))  # append a new one acording to last_step_direction
+                                  last_in_circle[1] + self.last_step_direction[1]))  # append a new one
 
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take the new last coordinates
-        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1], batch=window.batch))  # add new snake_body to the snake_field
+        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1],
+                                                     batch=window.batch))  # add new snake_body to the snake_field
 
     def take_snake_body(self):  # pop the last snake body and coordinates
         self.circle_field.pop(0)
         self.snake_field.pop(0)
 
     def spawn_food(self):
-        self.food_position = (25 + random.randint(0, 23) * 50, 25 + random.randint(0, 15) * 50)  # set a new random food position TODO window size matters
+        self.food_position = (25 + random.randint(0, 23) * 50,
+                              25 + random.randint(0, 15) * 50)  # set a new food position TODO window size matters
 
         try:  # check if it's valid
             self.circle_field.index(self.food_position)
@@ -400,11 +432,13 @@ class Snake:
 
     def update_main_batch(self):
         window.main_batch.clear()
-        window.main_batch.append(pyglet.sprite.Sprite(food, x=self.food_position[0], y=self.food_position[1], batch=window.batch))
+        window.main_batch.append(pyglet.sprite.Sprite(food, x=self.food_position[0], y=self.food_position[1],
+                                                      batch=window.batch))
         # window.main_batch += self.snake_field
 
     def check_for_direction(self):  # check if the snake is in proper position to change it's direction
-        if self.block_coverage == 0 and (self.last_step_direction != (-self.new_step_direction[0], -self.new_step_direction[1])):
+        if self.block_coverage == 0 and \
+                (self.last_step_direction != (-self.new_step_direction[0], -self.new_step_direction[1])):
             self.last_step_direction = self.new_step_direction
             self.block_coverage += 1
 
@@ -434,9 +468,10 @@ class Snake:
 
             self.spawn_food()
             self.food_count += 1
-            self.label = pyglet.text.Label('{}'.format(self.food_count-3), font_size=540, color=(255, 255, 255, 25))  # update label
+            self.label = pyglet.text.Label('{}'.format(self.food_count-3),
+                                           font_size=540, color=(255, 255, 255, 25))  # update label
             self.growth = 1
-            pyglet.clock.schedule_once(self.stop_grow, self.move_time*5)  # start cutting it's tail again TODO block size matters
+            pyglet.clock.schedule_once(self.stop_grow, self.move_time*5)  # start cutting tail TODO block size matters
 
     def stop_grow(self, dt):
         self.growth = 0
@@ -450,8 +485,6 @@ class Snake:
 
         self.update_main_batch()
         self.time_played += self.move_time
-        if pyglet.clock.get_fps() < 200:
-            print(self.food_count - 3, ":", pyglet.clock.get_fps())  # performance check
 
     def loss(self):  # what if you lose
         pyglet.clock.unschedule(self.move)
@@ -465,23 +498,13 @@ class Snake:
         stats.data.store_data()
 
         window.set_mouse_visible(True)
-        pyglet.clock.schedule_interval(self.fade_in, 1/85)
-
-    def fade_in(self, dt):  # animation for death screen
-        death.opacity += 1
-        if self.time_in_fade >= 2.98:
-            pyglet.clock.unschedule(self.fade_in)
-            pyglet.clock.schedule_once(self.appear, 0.8)
-        else:
-            self.time_in_fade += 1/85
-
-    @staticmethod
-    def appear(dt):  # animation for death description
-        death_desc.opacity = 255
+        pyglet.clock.schedule_interval(death.fade, death.call_time)
+        pyglet.clock.schedule_once(death_desc.appear, death_desc.call_time)
 
     def reset(self, call_menu=True):  # restart the game
         menu.last_difficulty = self.difficulty
-        pyglet.clock.unschedule(self.fade_in)  # if you reset and die before the animation ends, this takes care of it
+        pyglet.clock.unschedule(death.fade)  # if you reset and die before the animation ends, this takes care of it
+        pyglet.clock.unschedule(death_desc.appear)
 
         self.__init__()
         pyglet.clock.unschedule(self.move)
@@ -543,7 +566,8 @@ if __name__ == '__main__':
     lose_sign = pyglet.resource.image('textures/interface/lose_sign.png')
 
     center_image(body), center_image(food), center_image(lose_sign)
-    grid, pause, lose_sign = pyglet.sprite.Sprite(grid, x=1, y=0), pyglet.sprite.Sprite(pause, x=0, y=0), pyglet.sprite.Sprite(lose_sign)
+    grid, pause = pyglet.sprite.Sprite(grid, x=1, y=0), pyglet.sprite.Sprite(pause, x=0, y=0)
+    lose_sign = pyglet.sprite.Sprite(lose_sign)
     grid.opacity = 25
 
     """ Menu things """
@@ -551,20 +575,23 @@ if __name__ == '__main__':
     menu_left = pyglet.resource.image('textures/interface/menu_left.png')
     menu_arrow = pyglet.resource.image('textures/interface/menu_arrow.png')
     menu_difficulty = pyglet.resource.image('textures/interface/menu_difficulty.png')
-    death = pyglet.resource.image('textures/interface/death.png')
-    death_desc = pyglet.resource.image('textures/interface/death_description.png')
 
     center_image(menu_arrow)
     blank = pyglet.sprite.Sprite(blank)
     menu_left = pyglet.sprite.Sprite(menu_left, x=0, y=0)
-    menu_arrow1, menu_arrow2 = pyglet.sprite.Sprite(menu_arrow, x=377, y=405), pyglet.sprite.Sprite(menu_arrow, x=800, y=500)
+    menu_arrow2 = pyglet.sprite.Sprite(menu_arrow, x=800, y=500)
     menu_difficulty = pyglet.sprite.Sprite(menu_difficulty, x=396, y=255)
-    death = pyglet.sprite.Sprite(death)
-    death_desc = pyglet.sprite.Sprite(death_desc)
 
-    menu_arrow1.rotation, menu_arrow2.rotation = 180, 180
+    menu_arrow_1 = Animation('textures/interface/menu_arrow.png',
+                             377, 405, call_time=0.01, duration=0.06)
+    death = Animation('textures/interface/death.png',
+                      0, 0, call_time=1/84, duration=3, amount=1, center=False)
+    death_desc = Animation('textures/interface/death_description.png',
+                           0, 0, call_time=3.5, amount=255, center=False)
+
+    menu_arrow_1.object.rotation, menu_arrow2.rotation = 180, 180
 
     """ Start things """
-    window.call_menu()  # TODO should be called from Menu() later
+    window.call_menu()
 
     pyglet.app.run()
