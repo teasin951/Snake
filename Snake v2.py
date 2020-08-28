@@ -9,6 +9,24 @@ def center_image(image):
     image.anchor_y = image.height // 2
 
 
+def outline_label(text, x, y, outline_distance, font, font_size, text_color, outline_color, batch):
+    lizt = []
+    main = pyglet.graphics.OrderedGroup(1)
+    outlining = pyglet.graphics.OrderedGroup(0)
+
+    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=font,
+                                  font_size=font_size, color=text_color, batch=batch, group=main,
+                                  anchor_x='center', anchor_y='center'))
+
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            lizt.append(pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
+                                          font_name=font, font_size=font_size,
+                                          color=outline_color, batch=batch, group=outlining,
+                                          anchor_x='center', anchor_y='center'))
+    return lizt
+
+
 class Window(pyglet.window.Window):
     def __init__(self):
         super().__init__(1200, 800)
@@ -18,34 +36,46 @@ class Window(pyglet.window.Window):
         self.active_window = 1
 
         self.screen_function = ""
+        self.sound = True
 
         self.batch = pyglet.graphics.Batch()  # for main batch
         self.main_batch = []
 
     """ These should be called to initiate a different window """
     def call_menu(self):
+        background.prepare_movement(-200, -200)
+        pyglet.clock.schedule_interval(background.move, background.call_time)
         self.screen_function = "Menu"
 
     def call_snake(self):
+        background.amount = -0.0085
+        background.prepare_movement(-150, 0)
+        pyglet.clock.schedule_interval(background.move, background.call_time)
+        pyglet.clock.schedule_interval(background.scale, background.call_time)
         self.screen_function = "Snake"
         snake.start()
 
     def call_options(self):
+        background.prepare_movement(-300, -100)
+        pyglet.clock.schedule_interval(background.move, background.call_time)
         self.screen_function = "Options"
-        options.show()
 
     def call_shop(self):
+        background.prepare_movement(-50, -250)
+        pyglet.clock.schedule_interval(background.move, background.call_time)
         self.screen_function = "Shop"
-        shop.show()
+        shop.__init__()
 
     def call_stats(self):
+        background.prepare_movement(-350, -220)
+        pyglet.clock.schedule_interval(background.move, background.call_time)
         self.screen_function = "Stats"
         stats.show()
 
     def on_draw(self):
         self.clear()
+        background.object.draw()
         if self.screen_function == "Menu":
-            blank.draw()
             menu_left.draw()
             menu_arrow_1.object.draw()
 
@@ -57,6 +87,8 @@ class Window(pyglet.window.Window):
             snake.label.draw()
             grid.draw()
             self.batch.draw()
+            pyglet.text.Label("+{}".format(stats.calculate_snakies(integer=False)),
+                              font_name="Calisto MT", font_size=12, x=600, y=16).draw()
 
             if self.active_window == 0:
                 pause.draw()
@@ -66,13 +98,14 @@ class Window(pyglet.window.Window):
                 death_desc.object.draw()
 
         elif self.screen_function == "Options":
-            pass
+            for i in options.optionsField:
+                i.draw()
 
         elif self.screen_function == "Shop":
-            pass
+            shop.shopBatch.draw()
 
         elif self.screen_function == "Stats":
-            pass
+            stats.statsBatch.draw()
 
     def on_deactivate(self):  # just to pause the game if you click elsewhere
         if self.screen_function == "Snake" and snake.game_state == 1:
@@ -83,9 +116,29 @@ class Window(pyglet.window.Window):
         if self.screen_function == "Menu":
             menu.mouse_function(x, y, button)
 
+        elif self.screen_function == "Shop":
+            shop.mouse_function(x, y, button)
+
+        elif self.screen_function == "Stats":
+            stats.mouse_function(x, y, button)
+
+        elif self.screen_function == "Options":
+            options.mouse_functions(x, y, button)
+
     def on_mouse_motion(self, x, y, dx, dy):
         if self.screen_function == "Menu":
             menu.mouse_function(x, y, button=None)
+
+        elif self.screen_function == "Shop":
+            shop.mouse_function(x, y, button=0)  # TODO button=None
+
+    def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
+        if self.screen_function == "Options":
+            options.scroll(scroll_y)
+
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        if self.screen_function == "Options":
+            options.drag(x, y, dx, buttons)
 
     def on_key_press(self, symbol, modifiers):
         if self.screen_function == "Snake":
@@ -93,6 +146,20 @@ class Window(pyglet.window.Window):
 
         elif self.screen_function == "Menu":
             menu.keyboard_function(symbol)
+
+        elif self.screen_function == "Options":
+            options.keyboard_function(symbol)
+
+        elif self.screen_function == "Shop":
+            shop.keyboard_function(symbol)
+
+        elif self.screen_function == "Stats":
+            stats.keyboard_function(symbol)
+
+    def on_close(self):
+        window.close()
+        if self.screen_function == "Options":
+            options.leave_options()
 
 
 class Menu:
@@ -208,6 +275,10 @@ class Menu:
 
             elif symbol == key.RIGHT:
                 self.play()
+
+            elif symbol == key.ESCAPE:
+                window.close()
+
         else:
             if symbol == key.ENTER:
                 if self.highlighted_option == 0:
@@ -235,29 +306,166 @@ class Menu:
                 self.play_state = False
                 self.highlighted_option = 0
 
+            elif symbol == key.ESCAPE:
+                menu_arrow_1.prepare_animation(amount=-10)
+                pyglet.clock.schedule_interval(menu_arrow_1.rotate, menu_arrow_1.call_time)
+                self.play_state = False
+                self.highlighted_option = 0
+
 
 class Shop:
     def __init__(self):
-        pass
+        self.shopBatch = pyglet.graphics.Batch()
+        self.shopBatchField = []
 
-    def show(self):
-        print("Shop")
+        self.interface = self.create_shop_object("textures/interface/Shop.png")
+        self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
+                                          x=1000, y=760, font="Copperplate Gothic Bold", font_size=26,
+                                          outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                          outline_distance=1, batch=self.shopBatch)
+
+    def create_shop_object(self, path, x=0, y=0):
+        return pyglet.sprite.Sprite(pyglet.resource.image(path),
+                                    x=x, y=y,
+                                    batch=self.shopBatch)
+
+    def mouse_function(self, x, y, button):
+        if button == mouse.LEFT:
+            if 25 < x < 195 and 735 < y < 780:
+                window.call_menu()
+
+    def keyboard_function(self, symbol):  # TODO
+        if symbol == key.ESCAPE:
+            window.call_menu()
 
 
 class Stats:
     def __init__(self):
         self.data = Data()
 
+
+        self.statsBatch = pyglet.graphics.Batch()
+        self.statsBatchField = []
+
+        self.interface = self.create_stats_object("textures/interface/Stats.png")
+
+    def create_stats_object(self, path, x=0, y=0):
+        return pyglet.sprite.Sprite(pyglet.resource.image(path),
+                                    x=x, y=y,
+                                    batch=self.statsBatch)
+
     def show(self):
-        print("Stats")
+        self.statsBatchField.append(self.interface)
+
+    def calculate_snakies(self, integer=True):
+        if snake.difficulty == 0:
+            multiplier = 0.5
+            power = 1.35
+        elif snake.difficulty == 2:
+            multiplier = 1.5
+            power = 1.35
+        elif snake.difficulty == 3:
+            multiplier = 3
+            power = 1.8
+        else:
+            multiplier = 1
+            power = 1.35
+
+        snakies = round((((snake.food_count - 3) ** power - snake.time_played) * multiplier), 2)
+        if snakies < 0:
+            return 0
+        elif integer:
+            return int(snakies)
+        elif not integer:
+            return snakies
+
+    def mouse_function(self, x, y, button):
+        if button == mouse.LEFT:
+            if 25 < x < 195 and 735 < y < 780:
+                window.call_menu()
+
+    def keyboard_function(self, symbol):  # TODO
+        if symbol == key.ESCAPE:
+            window.call_menu()
 
 
 class Options:
     def __init__(self):
-        pass
+        self.optionsField = []
+        self.create_options_object("textures/interface/Options.png", y=-296)
+        self.create_options_object("textures/interface/Options_knob.png",
+                                   x=self.set_knob(stats.data.data[26]), y=562, center=True)
+        self.create_options_object("textures/interface/Options_knob.png",
+                                   x=self.set_knob(stats.data.data[27]), y=476, center=True)
+        self.create_options_object("textures/interface/Options_knob.png",
+                                   x=self.set_knob(stats.data.data[28]), y=386, center=True)
 
-    def show(self):
-        print("Options")
+
+        self.scroll_amount = 0
+        self.scroll_value = 0
+
+    def create_options_object(self, path, x=0, y=0, center=False):
+        if not center:
+            self.optionsField.append(pyglet.sprite.Sprite(pyglet.resource.image(path), x=x, y=y))
+        else:
+            image = pyglet.resource.image(path)
+            center_image(image)
+            self.optionsField.append(pyglet.sprite.Sprite(image, x=x, y=y))
+
+    @staticmethod
+    def set_knob(value):
+        return round(int(value.strip("\n")) * 6.3 + 368)
+
+    def leave_options(self):
+        window.call_menu()
+        for i in range(3):
+            stats.data.write_data_replace(26 + i, round((self.optionsField[1 + i].x-368)//6.3))
+        stats.data.store_data()
+
+    def mouse_functions(self, x, y, button):
+        if button == mouse.LEFT:
+            if 25 < x < 195 and 735 - self.scroll_value < y < 780 - self.scroll_value:
+                self.leave_options()
+
+            # click the first knob
+            elif 370 < x < 1000 and 547 - self.scroll_value < y < 578 - self.scroll_value:
+                self.optionsField[1].x = x
+
+            # click the second knob
+            elif 370 < x < 1000 and 460 - self.scroll_value < y < 493 - self.scroll_value:
+                self.optionsField[2].x = x
+
+            # click the third knob
+            elif 370 < x < 1000 and 370 - self.scroll_value < y < 403 - self.scroll_value:
+                self.optionsField[3].x = x
+
+    def drag(self, x, y, dx, button):
+        if button == mouse.LEFT:
+            # drag the first knob
+            if 370 < x < 1000 and 547 - self.scroll_value < y < 578 - self.scroll_value:
+                if 370 < self.optionsField[1].x + dx < 1000:
+                    self.optionsField[1].x = x
+
+            # drag the second knob
+            elif 370 < x < 1000 and 460 - self.scroll_value < y < 493 - self.scroll_value:
+                if 370 < self.optionsField[2].x + dx < 1000:
+                    self.optionsField[2].x = x
+
+            # drag the third knob
+            elif 370 < x < 1000 and 370 - self.scroll_value < y < 403 - self.scroll_value:
+                if 370 < self.optionsField[3].x + dx < 1000:
+                    self.optionsField[3].x = x
+
+    def scroll(self, scroll):
+        self.scroll_amount = scroll * 50
+        if -297 < self.optionsField[0].y - self.scroll_amount < 5:
+            for i in self.optionsField:
+                i.y -= self.scroll_amount
+            self.scroll_value += self.scroll_amount
+
+    def keyboard_function(self, symbol):
+        if symbol == key.ESCAPE:
+            self.leave_options()
 
 
 class Data:
@@ -308,7 +516,9 @@ class Data:
                         "0\n", "0\n", "0\n", "0\n",
                         "0\n", "0\n", "0\n", "0\n",
                         "0\n",
-                        "0\n", "0\n", "0\n", "0\n"
+                        "0\n", "0\n", "0\n", "0\n",
+                        "0\n", "0\n", "0\n", "0\n",
+                        "100\n", "100\n", "100\n"
                         ]
             for i in template:
                 file.write(i)
@@ -324,6 +534,9 @@ class Data:
     def write_data_score(self, position, score):
         if int(self.data[position]) < score:
             self.data[position] = str(score) + "\n"
+
+    def write_data_replace(self, position, new_value):
+        self.data[position] = str(new_value) + "\n"
 
     def store_data(self):
         with open("common/statistics.dat", "w") as file:
@@ -343,6 +556,32 @@ class Animation:
         self.call_time = call_time  # how often will pyglet call a function
         self.duration = duration  # total time an animation should take
         self.amount = amount  # an amount given to an object every pyglet call
+
+        # for movement and calculations
+        self.x_amount = 0
+        self.y_amount = 0
+        self.time2 = 0
+
+    def prepare_movement(self, new_x, new_y):  # to calculate how to move, mainly for background
+        self.x_amount = (new_x - self.object.x) / (self.duration / self.call_time)
+        self.y_amount = (new_y - self.object.y) / (self.duration / self.call_time)
+
+    def move(self, dt):
+        self.object.x += self.x_amount
+        self.object.y += self.y_amount
+
+        self.time += self.call_time
+        if self.time >= self.duration:
+            pyglet.clock.unschedule(self.move)
+            self.time = 0
+
+    def scale(self, dt):
+        self.object.scale += self.amount
+
+        self.time2 += self.call_time
+        if self.time2 >= self.duration:
+            pyglet.clock.unschedule(self.scale)
+            self.time2 = 0
 
     def prepare_animation(self, amount=None, duration=None):
         if amount is not None:
@@ -366,6 +605,11 @@ class Animation:
 
     def appear(self, dt):
         self.object.opacity = self.amount
+
+
+    def reset(self):
+        self.time = 0
+        self.object.opacity = 0
 
 
 class Snake:
@@ -393,7 +637,6 @@ class Snake:
         self.time_in_fade = 0
 
 
-
     def start(self):
         for i in range(16):  # creates the starting snake TODO block size matters
             self.add_snake_body()
@@ -404,8 +647,6 @@ class Snake:
         pyglet.clock.schedule_interval(self.move, self.move_time)  # move with snake
         self.update_main_batch()
         window.set_mouse_visible(False)
-
-        death.object.opacity, death_desc.object.opacity = 0, 0  # just to reset death screen
 
     def add_snake_body(self):
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take last coordinates of snake body
@@ -494,7 +735,7 @@ class Snake:
         stats.data.write_data_addition(5 + self.difficulty, 1)  # games played
         stats.data.write_data_addition(9 + self.difficulty, self.food_count - 3)  # food eaten
         stats.data.write_data_addition(13 + self.difficulty, int(self.time_played))  # playtime
-        # TODO in-game currency
+        stats.data.write_data_addition(17, stats.calculate_snakies())
         stats.data.store_data()
 
         window.set_mouse_visible(True)
@@ -505,12 +746,15 @@ class Snake:
         menu.last_difficulty = self.difficulty
         pyglet.clock.unschedule(death.fade)  # if you reset and die before the animation ends, this takes care of it
         pyglet.clock.unschedule(death_desc.appear)
+        death.reset(), death_desc.reset()
 
         self.__init__()
         pyglet.clock.unschedule(self.move)
         self.update_main_batch()
 
         if call_menu:
+            background.amount = 0.0085
+            pyglet.clock.schedule_interval(background.scale, background.call_time)
             window.call_menu()
         else:
             self.difficulty = menu.last_difficulty
@@ -518,13 +762,13 @@ class Snake:
 
     def keyboard_functions(self, symbol):
         if self.game_state == 1:  # if you are in the game and alive
-            if symbol == key.UP:
+            if symbol == key.UP or symbol == key.W:
                 self.new_step_direction = (0, 10)
-            if symbol == key.DOWN:
+            if symbol == key.DOWN or symbol == key.S:
                 self.new_step_direction = (0, -10)
-            if symbol == key.LEFT:
+            if symbol == key.LEFT or symbol == key.A:
                 self.new_step_direction = (-10, 0)
-            if symbol == key.RIGHT:
+            if symbol == key.RIGHT or symbol == key.D:
                 self.new_step_direction = (10, 0)
 
             if symbol == key.ESCAPE and window.active_window == 1:
@@ -553,8 +797,8 @@ class Snake:
 if __name__ == '__main__':
     window = Window()
     menu = Menu()
-    shop = Shop()
     stats = Stats()
+    shop = Shop()
     options = Options()
     snake = Snake()
 
@@ -566,18 +810,17 @@ if __name__ == '__main__':
     lose_sign = pyglet.resource.image('textures/interface/lose_sign.png')
 
     center_image(body), center_image(food), center_image(lose_sign)
-    grid, pause = pyglet.sprite.Sprite(grid, x=1, y=0), pyglet.sprite.Sprite(pause, x=0, y=0)
+    grid = pyglet.sprite.Sprite(grid, x=1, y=0)
+    pause = pyglet.sprite.Sprite(pause)
     lose_sign = pyglet.sprite.Sprite(lose_sign)
     grid.opacity = 25
 
     """ Menu things """
-    blank = pyglet.resource.image('textures/interface/blank.png')
     menu_left = pyglet.resource.image('textures/interface/menu_left.png')
     menu_arrow = pyglet.resource.image('textures/interface/menu_arrow.png')
     menu_difficulty = pyglet.resource.image('textures/interface/menu_difficulty.png')
 
     center_image(menu_arrow)
-    blank = pyglet.sprite.Sprite(blank)
     menu_left = pyglet.sprite.Sprite(menu_left, x=0, y=0)
     menu_arrow2 = pyglet.sprite.Sprite(menu_arrow, x=800, y=500)
     menu_difficulty = pyglet.sprite.Sprite(menu_difficulty, x=396, y=255)
@@ -589,6 +832,10 @@ if __name__ == '__main__':
     death_desc = Animation('textures/interface/death_description.png',
                            0, 0, call_time=3.5, amount=255, center=False)
 
+    background = Animation('textures/interface/blank.jpg', -200, -200, call_time=0.01,
+                           duration=0.3, center=False)
+
+    death.object.opacity, death_desc.object.opacity = 0, 0
     menu_arrow_1.object.rotation, menu_arrow2.rotation = 180, 180
 
     """ Start things """
