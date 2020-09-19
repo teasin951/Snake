@@ -11,8 +11,19 @@ easy_food                   add food eaten in game, total food counter
 normal_food                 -\\-
 hard_food                   -\\-
 impossible_food             -\\-
-playtime                    add time played before death, total playtime in-game
+easy_playtime               add time played before death, total playtime in each mode
+normal_playtime             -\\-
+hard_playtime               -\\-
+impossible_playtime         -\\-
 snakies                     add after game, game currency
 bodies                      add if new bought, owned skins
 foods                       add if new bought, owned food skins
 backgrounds                 add if new bought, owned backgrounds
+soundtracks                 add if new bought, owned soundtracks
+body_in_use                 what was used last time, 0 is default
+food_in_use                 -\\-
+background_in_use           -\\-
+soundtrack_in_use           -\\-
+master_in_use               -\\-
+music_in_use                -\\-
+effects_in_use              -\\-
