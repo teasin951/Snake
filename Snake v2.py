@@ -78,7 +78,6 @@ class Window(pyglet.window.Window):
         self.screen_function = "Stats"
         stats.show()
 
-
     def on_draw(self):
         self.clear()
         background.object.draw()
@@ -131,8 +130,12 @@ class Window(pyglet.window.Window):
         elif self.screen_function == "Options":
             options.mouse_functions(x, y, button)
 
+        elif self.screen_function == "Snake" and self.active_window == 0:
+            snake.mouse_function(x, y, button)
+
     def on_mouse_release(self, x, y, button, modifiers):
-        if self.screen_function == "Options":
+        if self.screen_function == "Options" and (260 - options.scroll_value < y < 640 - options.scroll_value or
+                                                  50 - options.scroll_value < y < 240 - options.scroll_value):
             if button == mouse.LEFT:
                 options.redraw_labels()
 
@@ -480,7 +483,11 @@ class Options:
         self.backgroundGroup = pyglet.graphics.OrderedGroup(0)
         self.foregroundGroup = pyglet.graphics.OrderedGroup(1)
 
-        self.create_options_object("textures/interface/Options.png", y=-296,
+        self.scroll_amount = 0
+        self.scroll_value = 0
+
+        """ The code NEEDS the first five objects to be in this order """
+        self.create_options_object("textures/interface/Options.png", y=-1000,
                                    batch=self.optionsBatch, group=self.backgroundGroup)
         self.create_options_object("textures/interface/Options_knob.png",
                                    x=self.set_knob(stats.data.data[26]), y=562, center=True,
@@ -491,11 +498,21 @@ class Options:
         self.create_options_object("textures/interface/Options_knob.png",
                                    x=self.set_knob(stats.data.data[28]), y=386, center=True,
                                    batch=self.optionsBatch, group=self.foregroundGroup)
+        self.create_options_object("textures/interface/Options_knob.png",
+                                   x=self.set_knob(stats.data.data[29]), y=193, center=True,
+                                   batch=self.optionsBatch, group=self.foregroundGroup)
+        self.create_options_object("textures/interface/Options_knob.png",
+                                   x=self.set_knob(stats.data.data[30]), y=106, center=True,
+                                   batch=self.optionsBatch, group=self.foregroundGroup)
+
+        self.create_options_object("textures/interface/Options_grid.png", y=-1000,
+                                   batch=self.optionsBatch, group=self.backgroundGroup)
+        self.create_options_object("textures/interface/Options_score.png", y=-1000,
+                                   batch=self.optionsBatch, group=self.backgroundGroup)
 
         self.draw_knob_values()
-
-        self.scroll_amount = 0
-        self.scroll_value = 0
+        self.optionsField[6].opacity = round(self.calculate_knob(3) * 255 / 100)
+        self.optionsField[7].opacity = round(self.calculate_knob(4) * 255 / 100)
 
     def create_options_object(self, path, batch, group, x=0, y=0, center=False):
         if not center:
@@ -519,13 +536,21 @@ class Options:
         self.labelField.clear()
         self.draw_knob_values()
 
+        self.optionsField[6].opacity = round(self.calculate_knob(3) * 255 / 100)
+        grid.opacity = round(self.calculate_knob(3) * 255 / 100)
+        self.optionsField[7].opacity = round(self.calculate_knob(4) * 255 / 100)
+        snake.label.color = (255, 255, 255, round(self.calculate_knob(4) * 255 / 100))
+
         menuM.adjust_music_volume()
+        gameM.adjust_music_volume()
         effect.adjust()
 
     def draw_knob_values(self):
-        self.create_knob_value(1080, 564, 0, batch=self.labelBatch)
-        self.create_knob_value(1080, 478, 1, batch=self.labelBatch)
-        self.create_knob_value(1080, 390, 2, batch=self.labelBatch)
+        self.create_knob_value(1080, 564-self.scroll_value, 0, batch=self.labelBatch)
+        self.create_knob_value(1080, 478-self.scroll_value, 1, batch=self.labelBatch)
+        self.create_knob_value(1080, 390-self.scroll_value, 2, batch=self.labelBatch)
+        self.create_knob_value(1080, 196-self.scroll_value, 3, batch=self.labelBatch)
+        self.create_knob_value(1080, 110-self.scroll_value, 4, batch=self.labelBatch)
 
     @staticmethod
     def set_knob(value):
@@ -536,15 +561,24 @@ class Options:
 
     def leave_options(self):
         window.call_menu()
-        for i in range(3):
+        for i in range(5):
             stats.data.write_data_replace(26 + i, self.calculate_knob(i))
         stats.data.store_data()
 
     def mouse_functions(self, x, y, button):
         if button == mouse.LEFT:
             if 25 < x < 195 and 735 - self.scroll_value < y < 780 - self.scroll_value:
-                self.leave_options()
-                effect.play(effect.enter)
+                if snake.game_state == -1:
+                    window.screen_function = "Snake"
+                    gameM.adjust(0.01)
+                    snake.game_state = 1
+                    for i in range(3):
+                        stats.data.write_data_replace(26 + i, self.calculate_knob(i))
+                    stats.data.store_data()
+
+                else:
+                    self.leave_options()
+                    effect.play(effect.enter)
 
             # click the first knob
             elif 370 < x < 1000 and 547 - self.scroll_value < y < 578 - self.scroll_value:
@@ -557,6 +591,14 @@ class Options:
             # click the third knob
             elif 370 < x < 1000 and 370 - self.scroll_value < y < 403 - self.scroll_value:
                 self.optionsField[3].x = x
+
+            #click the fourth knob
+            elif 370 < x < 1000 and 176 - self.scroll_value < y < 208 - self.scroll_value:
+                self.optionsField[4].x = x
+
+            #click the fifth knob
+            elif 370 < x < 1000 and 90 - self.scroll_value < y < 122 - self.scroll_value:
+                self.optionsField[5].x = x
 
     def drag(self, x, y, dx, button):
         if button == mouse.LEFT:
@@ -575,9 +617,19 @@ class Options:
                 if 370 < self.optionsField[3].x + dx < 1000:
                     self.optionsField[3].x = x
 
+            # drag the fourth knob
+            elif 370 < x < 1000 and 176 - self.scroll_value < y < 208 - self.scroll_value:
+                if 370 < self.optionsField[4].x + dx < 1000:
+                    self.optionsField[4].x = x
+
+            # drag the fifth knob
+            elif 370 < x < 1000 and 90 - self.scroll_value < y < 122 - self.scroll_value:
+                if 370 < self.optionsField[5].x + dx < 1000:
+                    self.optionsField[5].x = x
+
     def scroll(self, scroll):
-        self.scroll_amount = scroll * 50
-        if -297 < self.optionsField[0].y - self.scroll_amount < 5:
+        self.scroll_amount = scroll * 80
+        if -1001 < self.optionsField[0].y - self.scroll_amount < 0:
             for i in self.optionsField:
                 i.y -= self.scroll_amount
             for i in self.labelField:
@@ -587,8 +639,17 @@ class Options:
 
     def keyboard_function(self, symbol):
         if symbol == key.ESCAPE:
-            self.leave_options()
-            effect.play(effect.enter)
+            if snake.game_state == -1:
+                window.screen_function = "Snake"
+                gameM.adjust(0.01)
+                snake.game_state = 1
+                for i in range(3):
+                    stats.data.write_data_replace(26 + i, self.calculate_knob(i))
+                stats.data.store_data()
+
+            else:
+                self.leave_options()
+                effect.play(effect.enter)
 
 
 class Data:
@@ -641,7 +702,8 @@ class Data:
                         "0\n",
                         "0\n", "0\n", "0\n", "0\n",
                         "0\n", "0\n", "0\n", "0\n",
-                        "100\n", "100\n", "100\n"
+                        "100\n", "100\n", "100\n",
+                        "10\n", "10\n"
                         ]
             for i in template:
                 file.write(i)
@@ -675,10 +737,10 @@ class Media:
         self.player.loop = loop
 
     def play(self):
+        self.player.next_source()
         self.player.queue(self.media)
 
         self.player.volume = int(stats.data.data[26].strip("\n")) * int(stats.data.data[27].strip("\n")) / 10000
-        self.player.seek(0.0)
         self.player.play()
 
     def stop(self):
@@ -799,9 +861,9 @@ class Snake:
         self.last_step_direction = (10, 0)  # where the snake moved last time TODO block size matters
 
         self.label = pyglet.text.Label('{}'.format(self.food_count-3),
-                                       font_size=540, color=(255, 255, 255, 25))  # score label
-        self.game_state = -1  # indication if you are alive or dead
-        self.time_in_fade = 0
+                                       font_size=540,
+                                       color=(255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
+        self.game_state = 0  # indication if you are alive or dead
 
 
     def start(self):
@@ -892,7 +954,8 @@ class Snake:
             self.spawn_food()
             self.food_count += 1
             self.label = pyglet.text.Label('{}'.format(self.food_count-3),
-                                           font_size=540, color=(255, 255, 255, 25))  # update label
+                                           font_size=540,
+                                           color=(255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # update label
             self.growth = 1
             pyglet.clock.schedule_once(self.stop_grow, self.move_time*5)  # start cutting tail TODO block size matters
 
@@ -951,19 +1014,26 @@ class Snake:
             deathM.stop()
             gameM.play()
 
+    def mouse_function(self, x, y, button):  # TODO not working yet
+        if button == mouse.LEFT and 1100 < x < 1200 and 0 < y < 90:
+            self.game_state = -1
+            window.screen_function = "Options"
+            gameM.adjust(100)
+
     def keyboard_functions(self, symbol):
         if self.game_state == 1:  # if you are in the game and alive
-            if symbol == key.UP or symbol == key.W:
-                self.new_step_direction = (0, 10)
-            if symbol == key.DOWN or symbol == key.S:
-                self.new_step_direction = (0, -10)
-            if symbol == key.LEFT or symbol == key.A:
-                self.new_step_direction = (-10, 0)
-            if symbol == key.RIGHT or symbol == key.D:
-                self.new_step_direction = (10, 0)
+            if window.active_window == 1:
+                if symbol == key.UP or symbol == key.W:
+                    self.new_step_direction = (0, 10)
+                if symbol == key.DOWN or symbol == key.S:
+                    self.new_step_direction = (0, -10)
+                if symbol == key.LEFT or symbol == key.A:
+                    self.new_step_direction = (-10, 0)
+                if symbol == key.RIGHT or symbol == key.D:
+                    self.new_step_direction = (10, 0)
 
-            if symbol == key.ESCAPE and window.active_window == 1:
-                self.pause()
+                if symbol == key.ESCAPE:
+                    self.pause()
 
             elif symbol == key.ESCAPE and window.active_window == 0:
                 self.play()

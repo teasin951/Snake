@@ -27,3 +27,5 @@ soundtrack_in_use           -\\-
 master_in_use               -\\-
 music_in_use                -\\-
 effects_in_use              -\\-
+grid_opacity
+score_opacity
