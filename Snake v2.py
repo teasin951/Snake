@@ -28,6 +28,25 @@ def outline_label(text, x, y, outline_distance, font, font_size, text_color, out
     return lizt
 
 
+def outline_label_right(text, x, y, outline_distance, font, font_size, text_color, outline_color, batch):
+    lizt = []
+    main = pyglet.graphics.OrderedGroup(1)
+    outlining = pyglet.graphics.OrderedGroup(0)
+
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            lizt.append(pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
+                                          font_name=font, font_size=font_size,
+                                          color=outline_color, batch=batch, group=outlining,
+                                          anchor_x='right', anchor_y='center'))
+
+    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=font,
+                                  font_size=font_size, color=text_color, batch=batch, group=main,
+                                  anchor_x='right', anchor_y='center'))
+
+    return lizt
+
+
 class Window(pyglet.window.Window):
     def __init__(self):
         super().__init__(1200, 800)
@@ -76,7 +95,6 @@ class Window(pyglet.window.Window):
         background.prepare_movement(-350, -220)
         pyglet.clock.schedule_interval(background.move, background.call_time)
         self.screen_function = "Stats"
-        stats.show()
 
     def on_draw(self):
         self.clear()
@@ -135,7 +153,7 @@ class Window(pyglet.window.Window):
 
     def on_mouse_release(self, x, y, button, modifiers):
         if self.screen_function == "Options" and (260 - options.scroll_value < y < 640 - options.scroll_value or
-                                                  50 - options.scroll_value < y < 240 - options.scroll_value):
+                                                  -100 - options.scroll_value < y < 240 - options.scroll_value):
             if button == mouse.LEFT:
                 options.redraw_labels()
 
@@ -149,6 +167,9 @@ class Window(pyglet.window.Window):
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         if self.screen_function == "Options":
             options.scroll(scroll_y)
+
+        if self.screen_function == "Stats":
+            stats.scroll(scroll_y)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if self.screen_function == "Options":
@@ -178,6 +199,7 @@ class Window(pyglet.window.Window):
         menuM.player.delete()
         gameM.player.delete()
         deathM.player.delete()
+        effect.player.delete()
 
 
 class Menu:
@@ -408,22 +430,57 @@ class Stats:
     def __init__(self):
         self.data = Data()
 
-
         self.statsBatch = pyglet.graphics.Batch()
         self.statsBatchField = []
 
-        self.interface = self.create_stats_object("textures/interface/Stats.png")
+        self.interface = self.create_stats_object("textures/interface/Stats.png", y=-500)
+
+        self.scroll_amount = 0
+        self.scroll_value = 0
 
         self.memory = 0
         self.time_of_capcure = 0
+
+        self.statsBatchField.append(self.interface)
+        self.draw_values()
 
     def create_stats_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
                                     x=x, y=y,
                                     batch=self.statsBatch)
 
-    def show(self):
-        self.statsBatchField.append(self.interface)
+    def create_value(self, text, x, y, batch):
+        value = outline_label_right("{}".format(text),
+                                    x=x, y=y, font="Copperplate Gothic Bold", font_size=26,
+                                    outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                    outline_distance=1, batch=batch)
+
+        self.statsBatchField.extend(value)
+
+    def draw_values(self):
+        o_y = 602
+        all_food = int(self.data.data[9]) + int(self.data.data[10]) + int(self.data.data[11]) + int(self.data.data[12])
+
+        for i in range(4):
+            best = int(self.data.data[1+i])
+            games = int(self.data.data[5+i])
+            food = int(self.data.data[9+i])
+            playtime = int(self.data.data[13+i])
+
+            self.create_value(best, 600, o_y - 287*i, self.statsBatch)
+            self.create_value(games, 600, o_y - 51 - 287*i, self.statsBatch)
+            self.create_value(food, 600, o_y - 51*2 - 287*i, self.statsBatch)
+            self.create_value(self.create_time(playtime), 600, o_y - 51*3 - 287*i, self.statsBatch)
+
+            """ avg. score, avg. playtime, avg time / food, income percentage """
+            self.create_value(round(food / games, 1),
+                              1160, o_y - 287*i, self.statsBatch)
+            self.create_value(self.create_time(playtime / games),
+                              1160, o_y - 51 - 287*i, self.statsBatch)
+            self.create_value("{} s".format(round(playtime / food, 1)),
+                              1160, o_y - 51*2 - 287*i, self.statsBatch)
+            self.create_value("{} %".format(round((food / all_food) * 100, 1)),
+                              1160, o_y - 51*3 - 287 * i, self.statsBatch)
 
     def calculate_snakies(self, delte=False):
         if snake.difficulty == 0:
@@ -462,11 +519,32 @@ class Stats:
         else:
             return int(snakies)
 
+    def create_time(self, value):
+        data_sec = int(value)
+        hour = int(data_sec/3600)
+        mints = int(data_sec/60) - hour*60
+        sec = data_sec - mints*60 - hour*3600
+
+        if mints < 10:
+            mints = "0{}".format(mints)
+        if sec < 10:
+            sec = "0{}".format(sec)
+
+        return"{}:{}:{}".format(hour, mints, sec)
+
     def mouse_function(self, x, y, button):
         if button == mouse.LEFT:
-            if 25 < x < 195 and 735 < y < 780:
+            if 25 < x < 195 and 735 - self.scroll_value < y < 780 - self.scroll_value:
                 window.call_menu()
                 effect.play(effect.enter)
+
+    def scroll(self, scroll):
+        self.scroll_amount = scroll * 70
+        if -501 < self.statsBatchField[0].y - self.scroll_amount < 0:
+            for i in self.statsBatchField:
+                i.y -= self.scroll_amount
+
+            self.scroll_value += self.scroll_amount
 
     def keyboard_function(self, symbol):  # TODO
         if symbol == key.ESCAPE:
