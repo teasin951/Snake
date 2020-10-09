@@ -63,42 +63,42 @@ class Window(pyglet.window.Window):
 
     """ These should be called to initiate a different window """
     def call_menu(self):
-        background.prepare_movement(-200, -200)
-        pyglet.clock.schedule_interval(background.move, background.call_time)
+        shop.background.prepare_movement(-200, -200)
+        pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
         self.screen_function = "Menu"
 
     def call_snake(self):
-        background.amount = -0.0085
-        background.prepare_movement(-150, 0)
-        pyglet.clock.schedule_interval(background.move, background.call_time)
-        pyglet.clock.schedule_interval(background.scale, background.call_time)
+        shop.background.amount = -0.0085
+        shop.background.prepare_movement(-150, 0)
+        pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
+        pyglet.clock.schedule_interval(shop.background.scale, shop.background.call_time)
         self.screen_function = "Snake"
 
-        menuM.stop()
-        gameM.adjust(1.05)
-        gameM.play()
+        shop.menuM.stop()
+        shop.gameM.adjust(1.05)
+        shop.gameM.play()
 
         snake.start()
 
     def call_options(self):
-        background.prepare_movement(-300, -100)
-        pyglet.clock.schedule_interval(background.move, background.call_time)
+        shop.background.prepare_movement(-300, -100)
+        pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
         self.screen_function = "Options"
 
     def call_shop(self):
-        background.prepare_movement(-50, -250)
-        pyglet.clock.schedule_interval(background.move, background.call_time)
+        shop.background.prepare_movement(-50, -250)
+        pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
         self.screen_function = "Shop"
-        shop.__init__()
 
     def call_stats(self):
-        background.prepare_movement(-350, -220)
-        pyglet.clock.schedule_interval(background.move, background.call_time)
+        shop.background.prepare_movement(-350, -220)
+        pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
         self.screen_function = "Stats"
+        stats.show()
 
     def on_draw(self):
         self.clear()
-        background.object.draw()
+        shop.background.object.draw()
         if self.screen_function == "Menu":
             menu_left.draw()
             menu_arrow_1.object.draw()
@@ -191,14 +191,18 @@ class Window(pyglet.window.Window):
         elif self.screen_function == "Stats":
             stats.keyboard_function(symbol)
 
+    def on_key_release(self, symbol, modifiers):
+        if self.screen_function == "Stats":
+            stats.button_release()
+
     def on_close(self):
         window.close()
         if self.screen_function == "Options":
             options.leave_options()
 
-        menuM.player.delete()
-        gameM.player.delete()
-        deathM.player.delete()
+        shop.menuM.player.delete()
+        shop.gameM.player.delete()
+        shop.deathM.player.delete()
         effect.player.delete()
 
 
@@ -236,7 +240,7 @@ class Menu:
     def mouse_function(self, x, y, button):
         # """ if in menu and not clicked anything yet """
         if not self.play_state:
-            if 0 < x < 356 and 360 < y < 440:
+            if 0 < x < 356 and 365 < y < 445:
                 menu_arrow_1.object.position = (377, 405)
                 self.highlighted_option = 0
                 self.make_a_sound()
@@ -252,7 +256,7 @@ class Menu:
                     window.call_shop()
                     effect.play(effect.enter)
 
-            elif 0 < x < 356 and 150 < y < 230:
+            elif 0 < x < 356 and 155 < y < 235:
                 menu_arrow_1.object.position = (377, 195)
                 self.highlighted_option = 2
                 self.make_a_sound()
@@ -260,7 +264,7 @@ class Menu:
                     window.call_stats()
                     effect.play(effect.enter)
 
-            elif 0 < x < 356 and 40 < y < 120:
+            elif 0 < x < 356 and 50 < y < 130:
                 menu_arrow_1.object.position = (377, 90)
                 self.highlighted_option = 3
                 self.make_a_sound()
@@ -314,7 +318,7 @@ class Menu:
 
     def keyboard_function(self, symbol):
         if not self.play_state:
-            if symbol == key.ENTER:
+            if symbol == key.ENTER or symbol == key.RIGHT:
                 effect.play(effect.enter)
 
                 if self.highlighted_option == 0:
@@ -409,6 +413,42 @@ class Shop:
                                           outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                                           outline_distance=1, batch=self.shopBatch)
 
+        self.body = pyglet.resource.image('textures/body/{}.png'.format
+                                          (self.decipher(stats.data.data[22].strip('\n'))))
+        center_image(self.body)
+
+        self.food = pyglet.resource.image('textures/food/{}.png'.format
+                                          (self.decipher(stats.data.data[23].strip('\n'))))
+        center_image(self.food)
+
+        self.background = Animation('textures/background/{}.jpg'.format
+                                    (self.decipher(stats.data.data[24].strip('\n'))),
+                                    -200, -200, call_time=0.01, duration=0.3, center=False)
+
+        self.menuM = Media('resources/music/Payday/{} M#1.wav'.format
+                           (self.decipher(stats.data.data[25].strip('\n'))))
+        self.gameM = Media('resources/music/Payday/{} G#1.wav'.format
+                           (self.decipher(stats.data.data[25].strip('\n'))))
+        self.deathM = Media('resources/music/Payday/{} D#1.wav'.format
+                            (self.decipher(stats.data.data[25].strip('\n'))), loop=False)
+
+    @staticmethod
+    def decipher(code):
+        return {
+            'BBS': 'basic',
+            'BFG': 'fog',
+            'BIN': 'invisible',
+            'BJG': 'JuicyGreen',
+            'BBR': 'BloodyRed',
+
+            'FBS': 'basic',
+
+            'IDF': 'DarkForest',
+
+            'SPD': 'Payday'
+
+        }.get(code)
+
     def create_shop_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
                                     x=x, y=y,
@@ -433,15 +473,17 @@ class Stats:
         self.statsBatch = pyglet.graphics.Batch()
         self.statsBatchField = []
 
-        self.interface = self.create_stats_object("textures/interface/Stats.png", y=-500)
-
         self.scroll_amount = 0
         self.scroll_value = 0
 
         self.memory = 0
         self.time_of_capcure = 0
 
-        self.statsBatchField.append(self.interface)
+    def show(self):
+        self.statsBatch = pyglet.graphics.Batch()
+        self.statsBatchField.clear()
+        self.statsBatchField.append(self.create_stats_object("textures/interface/Stats.png",
+                                                             y=-500 - self.scroll_value))
         self.draw_values()
 
     def create_stats_object(self, path, x=0, y=0):
@@ -467,20 +509,20 @@ class Stats:
             food = int(self.data.data[9+i])
             playtime = int(self.data.data[13+i])
 
-            self.create_value(best, 600, o_y - 287*i, self.statsBatch)
-            self.create_value(games, 600, o_y - 51 - 287*i, self.statsBatch)
-            self.create_value(food, 600, o_y - 51*2 - 287*i, self.statsBatch)
-            self.create_value(self.create_time(playtime), 600, o_y - 51*3 - 287*i, self.statsBatch)
+            self.create_value(best, 600, o_y - 287*i - self.scroll_value, self.statsBatch)
+            self.create_value(games, 600, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
+            self.create_value(food, 600, o_y - 51*2 - 287*i - self.scroll_value, self.statsBatch)
+            self.create_value(self.create_time(playtime), 600, o_y - 51*3 - 287*i - self.scroll_value, self.statsBatch)
 
             """ avg. score, avg. playtime, avg time / food, income percentage """
             self.create_value(round(food / games, 1),
-                              1160, o_y - 287*i, self.statsBatch)
+                              1160, o_y - 287*i - self.scroll_value, self.statsBatch)
             self.create_value(self.create_time(playtime / games),
-                              1160, o_y - 51 - 287*i, self.statsBatch)
+                              1160, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
             self.create_value("{} s".format(round(playtime / food, 1)),
-                              1160, o_y - 51*2 - 287*i, self.statsBatch)
+                              1160, o_y - 51*2 - 287*i - self.scroll_value, self.statsBatch)
             self.create_value("{} %".format(round((food / all_food) * 100, 1)),
-                              1160, o_y - 51*3 - 287 * i, self.statsBatch)
+                              1160, o_y - 51*3 - 287 * i - self.scroll_value, self.statsBatch)
 
     def calculate_snakies(self, delte=False):
         if snake.difficulty == 0:
@@ -519,7 +561,8 @@ class Stats:
         else:
             return int(snakies)
 
-    def create_time(self, value):
+    @staticmethod
+    def create_time(value):
         data_sec = int(value)
         hour = int(data_sec/3600)
         mints = int(data_sec/60) - hour*60
@@ -546,10 +589,50 @@ class Stats:
 
             self.scroll_value += self.scroll_amount
 
-    def keyboard_function(self, symbol):  # TODO
-        if symbol == key.ESCAPE:
+    def keyboard_function(self, symbol):
+        if symbol == key.ESCAPE or symbol == key.LEFT:
             window.call_menu()
             effect.play(effect.enter)
+
+        if symbol == key.DOWN:
+            self.button_scroll_down(0)  # move it down
+            effect.play(effect.choose)  # make a sound
+            pyglet.clock.schedule_once(self.schedule_down, 0.3)  # after how long is holding triggered
+
+        if symbol == key.UP:
+            self.button_scroll_up(0)  # move it up
+            effect.play(effect.choose)  # make a sound
+            pyglet.clock.schedule_once(self.schedule_up, 0.3)  # after how long is holding triggered
+
+    def button_release(self):  # button released, cancel every hold function
+        pyglet.clock.unschedule(self.button_scroll_down)
+        pyglet.clock.unschedule(self.button_scroll_up)
+        pyglet.clock.unschedule(self.schedule_down)
+        pyglet.clock.unschedule(self.schedule_up)
+
+    def schedule_down(self, dt):
+        # effect.play(effect.enter)
+        pyglet.clock.schedule_interval(self.button_scroll_down, 0.05)  # speed of scroll
+
+    def schedule_up(self, dt):
+        # effect.play(effect.enter)
+        pyglet.clock.schedule_interval(self.button_scroll_up, 0.05)  # speed of scroll
+
+    def button_scroll_down(self, dt):
+        self.scroll_amount = -70
+        if -501 < self.statsBatchField[0].y - self.scroll_amount < 0:
+            for i in self.statsBatchField:
+                i.y -= self.scroll_amount
+
+            self.scroll_value += self.scroll_amount
+
+    def button_scroll_up(self, dt):
+        self.scroll_amount = 70
+        if -501 < self.statsBatchField[0].y - self.scroll_amount < 0:
+            for i in self.statsBatchField:
+                i.y -= self.scroll_amount
+
+            self.scroll_value += self.scroll_amount
 
 
 class Options:
@@ -619,8 +702,8 @@ class Options:
         self.optionsField[7].opacity = round(self.calculate_knob(4) * 255 / 100)
         snake.label.color = (255, 255, 255, round(self.calculate_knob(4) * 255 / 100))
 
-        menuM.adjust_music_volume()
-        gameM.adjust_music_volume()
+        shop.menuM.adjust_music_volume()
+        shop.gameM.adjust_music_volume()
         effect.adjust()
 
     def draw_knob_values(self):
@@ -648,7 +731,7 @@ class Options:
             if 25 < x < 195 and 735 - self.scroll_value < y < 780 - self.scroll_value:
                 if snake.game_state == -1:
                     window.screen_function = "Snake"
-                    gameM.adjust(0.01)
+                    shop.gameM.adjust(0.01)
                     snake.game_state = 1
                     for i in range(3):
                         stats.data.write_data_replace(26 + i, self.calculate_knob(i))
@@ -719,7 +802,7 @@ class Options:
         if symbol == key.ESCAPE:
             if snake.game_state == -1:
                 window.screen_function = "Snake"
-                gameM.adjust(0.01)
+                shop.gameM.adjust(0.01)
                 snake.game_state = 1
                 for i in range(3):
                     stats.data.write_data_replace(26 + i, self.calculate_knob(i))
@@ -769,7 +852,7 @@ class Data:
 
 
     @staticmethod
-    def add_new_account(account_name):
+    def add_new_account(account_name):  # TODO
         with open("common/statistics.dat", "a") as file:
             template = [
                         "{}\n".format(account_name),
@@ -779,7 +862,7 @@ class Data:
                         "0\n", "0\n", "0\n", "0\n",
                         "0\n",
                         "0\n", "0\n", "0\n", "0\n",
-                        "0\n", "0\n", "0\n", "0\n",
+                        "BBS\n", "FBS\n", "IDF\n", "SPD\n",  # SPD IDF should later be SBS IBS (soundtrack/image basic)
                         "100\n", "100\n", "100\n",
                         "10\n", "10\n"
                         ]
@@ -960,12 +1043,12 @@ class Snake:
         window.set_mouse_visible(True)
         pyglet.clock.unschedule(snake.move)
 
-        gameM.adjust(0.01)
+        shop.gameM.adjust(0.01)
 
     def play(self):
         window.active_window = 1
         window.set_mouse_visible(False)
-        gameM.adjust(100)
+        shop.gameM.adjust(100)
 
         if self.game_state == 1:
             pyglet.clock.schedule_interval(self.move, self.move_time)
@@ -976,7 +1059,7 @@ class Snake:
                                   last_in_circle[1] + self.last_step_direction[1]))  # append a new one
 
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take the new last coordinates
-        self.snake_field.append(pyglet.sprite.Sprite(body, x=last_in_circle[0], y=last_in_circle[1],
+        self.snake_field.append(pyglet.sprite.Sprite(shop.body, x=last_in_circle[0], y=last_in_circle[1],
                                                      batch=window.batch))  # add new snake_body to the snake_field
 
     def take_snake_body(self):  # pop the last snake body and coordinates
@@ -995,7 +1078,7 @@ class Snake:
 
     def update_main_batch(self):
         window.main_batch.clear()
-        window.main_batch.append(pyglet.sprite.Sprite(food, x=self.food_position[0], y=self.food_position[1],
+        window.main_batch.append(pyglet.sprite.Sprite(shop.food, x=self.food_position[0], y=self.food_position[1],
                                                       batch=window.batch))
         # window.main_batch += self.snake_field
 
@@ -1065,8 +1148,8 @@ class Snake:
         pyglet.clock.schedule_interval(death.fade, death.call_time)
         pyglet.clock.schedule_once(death_desc.appear, death_desc.call_time)
 
-        deathM.play()
-        gameM.stop()
+        shop.deathM.play()
+        shop.gameM.stop()
 
     def reset(self, call_menu=True):  # restart the game
         menu.last_difficulty = self.difficulty
@@ -1079,24 +1162,24 @@ class Snake:
         self.update_main_batch()
 
         if call_menu:
-            background.amount = 0.0085
-            pyglet.clock.schedule_interval(background.scale, background.call_time)
+            shop.background.amount = 0.0085
+            pyglet.clock.schedule_interval(shop.background.scale, shop.background.call_time)
 
             window.call_menu()
-            deathM.stop()
-            menuM.play()
+            shop.deathM.stop()
+            shop.menuM.play()
         else:
             self.difficulty = menu.last_difficulty
 
             self.start()
-            deathM.stop()
-            gameM.play()
+            shop.deathM.stop()
+            shop.gameM.play()
 
     def mouse_function(self, x, y, button):  # TODO not working yet
         if button == mouse.LEFT and 1100 < x < 1200 and 0 < y < 90:
             self.game_state = -1
             window.screen_function = "Options"
-            gameM.adjust(100)
+            shop.gameM.adjust(100)
 
     def keyboard_functions(self, symbol):
         if self.game_state == 1:  # if you are in the game and alive
@@ -1135,22 +1218,15 @@ if __name__ == '__main__':
     options = Options()
     snake = Snake()
 
-    """ Music things """
     effect = Effects()
-    menuM = Media('resources/music/Payday/Payday M#1.wav')
-    gameM = Media('resources/music/Payday/Payday G#1.wav')
-    deathM = Media('resources/music/Payday/Payday D#1.wav', loop=False)
 
     """ Snake things """
-    body = pyglet.resource.image('textures/body/basic.png')
-    food = pyglet.resource.image('textures/food/basic.png')
     grid = pyglet.resource.image('textures/interface/grid.png')
     pause = pyglet.resource.image('textures/interface/pause.png')
 
-    center_image(body), center_image(food)
     grid = pyglet.sprite.Sprite(grid, x=1, y=0)
     pause = pyglet.sprite.Sprite(pause)
-    grid.opacity = 25
+    grid.opacity = round(options.calculate_knob(3) * 255 / 100)
 
     """ Menu things """
     menu_left = pyglet.resource.image('textures/interface/menu_left.png')
@@ -1169,14 +1245,10 @@ if __name__ == '__main__':
     death_desc = Animation('textures/interface/death_description.png',
                            0, 0, call_time=3.5, amount=255, center=False)
 
-    background = Animation('textures/background/DarkForest.jpg', -200, -200, call_time=0.01,
-                           duration=0.3, center=False)
-
     death.object.opacity, death_desc.object.opacity = 0, 0
     menu_arrow_1.object.rotation, menu_arrow2.rotation = 180, 180
 
     """ Start things """
     window.call_menu()
-    menuM.play()
-
+    shop.menuM.play()
     pyglet.app.run()
