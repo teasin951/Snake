@@ -146,7 +146,7 @@ class Window(pyglet.window.Window):
             stats.mouse_function(x, y, button)
 
         elif self.screen_function == "Options":
-            options.mouse_functions(x, y, button)
+            options.mouse_function(x, y, button)
 
         elif self.screen_function == "Snake" and self.active_window == 0:
             snake.mouse_function(x, y, button)
@@ -160,6 +160,9 @@ class Window(pyglet.window.Window):
     def on_mouse_motion(self, x, y, dx, dy):
         if self.screen_function == "Menu":
             menu.mouse_function(x, y, button=None)
+
+        elif self.screen_function == "Options":
+            options.mouse_function(x, y, button=None)
 
         elif self.screen_function == "Shop":
             shop.mouse_function(x, y, button=0)
@@ -194,6 +197,10 @@ class Window(pyglet.window.Window):
     def on_key_release(self, symbol, modifiers):
         if self.screen_function == "Stats":
             stats.button_release()
+
+        if self.screen_function == "Options":
+            pyglet.clock.unschedule(options.move_knob_by_keyboard)
+            pyglet.clock.unschedule(options.knob_set_delay)
 
     def on_close(self):
         window.close()
@@ -595,39 +602,25 @@ class Stats:
             effect.play(effect.enter)
 
         if symbol == key.DOWN:
-            self.button_scroll_down(0)  # move it down
+            self.button_scroll(0, -1)  # move it down
             effect.play(effect.choose)  # make a sound
-            pyglet.clock.schedule_once(self.schedule_down, 0.3)  # after how long is holding triggered
+            pyglet.clock.schedule_once(self.schedule, 0.3, direction=-1)  # after how long is holding triggered
 
         if symbol == key.UP:
-            self.button_scroll_up(0)  # move it up
+            self.button_scroll(0, 1)  # move it up
             effect.play(effect.choose)  # make a sound
-            pyglet.clock.schedule_once(self.schedule_up, 0.3)  # after how long is holding triggered
+            pyglet.clock.schedule_once(self.schedule, 0.3, direction=1)  # after how long is holding triggered
 
     def button_release(self):  # button released, cancel every hold function
-        pyglet.clock.unschedule(self.button_scroll_down)
-        pyglet.clock.unschedule(self.button_scroll_up)
-        pyglet.clock.unschedule(self.schedule_down)
-        pyglet.clock.unschedule(self.schedule_up)
+        pyglet.clock.unschedule(self.button_scroll)
+        pyglet.clock.unschedule(self.schedule)
 
-    def schedule_down(self, dt):
+    def schedule(self, dt, direction):
         # effect.play(effect.enter)
-        pyglet.clock.schedule_interval(self.button_scroll_down, 0.05)  # speed of scroll
+        pyglet.clock.schedule_interval(self.button_scroll, 0.05, direction=direction)  # speed of scroll
 
-    def schedule_up(self, dt):
-        # effect.play(effect.enter)
-        pyglet.clock.schedule_interval(self.button_scroll_up, 0.05)  # speed of scroll
-
-    def button_scroll_down(self, dt):
-        self.scroll_amount = -70
-        if -501 < self.statsBatchField[0].y - self.scroll_amount < 0:
-            for i in self.statsBatchField:
-                i.y -= self.scroll_amount
-
-            self.scroll_value += self.scroll_amount
-
-    def button_scroll_up(self, dt):
-        self.scroll_amount = 70
+    def button_scroll(self, dt, direction):
+        self.scroll_amount = 70 * direction
         if -501 < self.statsBatchField[0].y - self.scroll_amount < 0:
             for i in self.statsBatchField:
                 i.y -= self.scroll_amount
@@ -644,8 +637,8 @@ class Options:
         self.backgroundGroup = pyglet.graphics.OrderedGroup(0)
         self.foregroundGroup = pyglet.graphics.OrderedGroup(1)
 
-        self.scroll_amount = 0
         self.scroll_value = 0
+        self.position = 0
 
         """ The code NEEDS the first five objects to be in this order """
         self.create_options_object("textures/interface/Options.png", y=-1000,
@@ -670,6 +663,8 @@ class Options:
                                    batch=self.optionsBatch, group=self.backgroundGroup)
         self.create_options_object("textures/interface/Options_score.png", y=-1000,
                                    batch=self.optionsBatch, group=self.backgroundGroup)
+        self.create_options_object("textures/interface/menu_arrow.png", x=90, y=562,
+                                   batch=self.optionsBatch, group=self.foregroundGroup, center=True)
 
         self.draw_knob_values()
         self.optionsField[6].opacity = round(self.calculate_knob(3) * 255 / 100)
@@ -726,7 +721,7 @@ class Options:
             stats.data.write_data_replace(26 + i, self.calculate_knob(i))
         stats.data.store_data()
 
-    def mouse_functions(self, x, y, button):
+    def mouse_function(self, x, y, button):
         if button == mouse.LEFT:
             if 25 < x < 195 and 735 - self.scroll_value < y < 780 - self.scroll_value:
                 if snake.game_state == -1:
@@ -761,42 +756,85 @@ class Options:
             elif 370 < x < 1000 and 90 - self.scroll_value < y < 122 - self.scroll_value:
                 self.optionsField[5].x = x
 
+        if button is None:
+            # hover over the first knob
+            if 100 < x < 1100 and 520 - self.scroll_value < y < 605 - self.scroll_value:
+                self.position = 0
+                self.optionsField[8].y = 562 - self.scroll_value
+
+            # hover over the second knob
+            elif 100 < x < 1100 and 432 - self.scroll_value < y < 520 - self.scroll_value:
+                self.position = 1
+                self.optionsField[8].y = 476 - self.scroll_value
+
+            # hover over the third knob
+            elif 100 < x < 1100 and 343 - self.scroll_value < y < 432 - self.scroll_value:
+                self.position = 2
+                self.optionsField[8].y = 386 - self.scroll_value
+
+            #hover over the fourth knob
+            elif 100 < x < 1100 and 149 - self.scroll_value < y < 235 - self.scroll_value:
+                self.position = 3
+                self.optionsField[8].y = 193 - self.scroll_value
+
+            #hover over the fifth knob
+            elif 100 < x < 1100 and 63 - self.scroll_value < y < 149 - self.scroll_value:
+                self.position = 4
+                self.optionsField[8].y = 106 - self.scroll_value
+
     def drag(self, x, y, dx, button):
         if button == mouse.LEFT:
             # drag the first knob
-            if 370 < x < 1000 and 547 - self.scroll_value < y < 578 - self.scroll_value:
+            if 370 < x < 1000 and 547 - self.scroll_value < y < 578 - self.scroll_value and self.position == 0:
                 if 370 < self.optionsField[1].x + dx < 1000:
                     self.optionsField[1].x = x
 
             # drag the second knob
-            elif 370 < x < 1000 and 460 - self.scroll_value < y < 493 - self.scroll_value:
+            elif 370 < x < 1000 and 460 - self.scroll_value < y < 493 - self.scroll_value and self.position == 1:
                 if 370 < self.optionsField[2].x + dx < 1000:
                     self.optionsField[2].x = x
 
             # drag the third knob
-            elif 370 < x < 1000 and 370 - self.scroll_value < y < 403 - self.scroll_value:
+            elif 370 < x < 1000 and 370 - self.scroll_value < y < 403 - self.scroll_value and self.position == 2:
                 if 370 < self.optionsField[3].x + dx < 1000:
                     self.optionsField[3].x = x
 
             # drag the fourth knob
-            elif 370 < x < 1000 and 176 - self.scroll_value < y < 208 - self.scroll_value:
+            elif 370 < x < 1000 and 176 - self.scroll_value < y < 208 - self.scroll_value and self.position == 3:
                 if 370 < self.optionsField[4].x + dx < 1000:
                     self.optionsField[4].x = x
 
             # drag the fifth knob
-            elif 370 < x < 1000 and 90 - self.scroll_value < y < 122 - self.scroll_value:
+            elif 370 < x < 1000 and 90 - self.scroll_value < y < 122 - self.scroll_value and self.position == 4:
                 if 370 < self.optionsField[5].x + dx < 1000:
                     self.optionsField[5].x = x
 
     def scroll(self, scroll):
-        self.scroll_amount = scroll * 80
-        if -1001 < self.optionsField[0].y - self.scroll_amount < 0:
+        scroll_amount = scroll * 80
+        if -1001 < self.optionsField[0].y - scroll_amount < 0:
             for i in self.optionsField:
-                i.y -= self.scroll_amount
+                i.y -= scroll_amount
             for i in self.labelField:
-                i.y -= self.scroll_amount
+                i.y -= scroll_amount
 
-            self.scroll_value += self.scroll_amount
+            self.scroll_value += scroll_amount
+
+    def set_scroll(self, scroll_value):
+        scroll_amount = self.scroll_value - scroll_value
+
+        for i in self.optionsField:
+            i.y += scroll_amount
+        for i in self.labelField:
+            i.y += scroll_amount
+
+        self.scroll_value -= scroll_amount
+
+    def move_knob_by_keyboard(self, dt, knob_number, movement_value, max_value):  # to move with a knob
+        if 367 < self.optionsField[knob_number].x + movement_value < 999:
+            self.optionsField[knob_number].x += movement_value
+        else:
+            self.optionsField[knob_number].x = max_value
+        self.redraw_labels()
 
     def keyboard_function(self, symbol):
         if symbol == key.ESCAPE:
@@ -811,6 +849,112 @@ class Options:
             else:
                 self.leave_options()
                 effect.play(effect.enter)
+
+        if symbol == key.UP:
+            if self.position == 1:
+                self.position = 0
+                self.optionsField[8].y = 562 - self.scroll_value
+
+            elif self.position == 2:
+                self.position = 1
+                self.optionsField[8].y = 476 - self.scroll_value
+
+            elif self.position == 3:
+                self.set_scroll(0)  # scroll to the top
+                self.position = 2
+                self.optionsField[8].y = 386 - self.scroll_value
+
+            elif self.position == 4:
+                self.position = 3
+                self.optionsField[8].y = 193 - self.scroll_value
+
+            elif self.position == 5:  # if you are scrolled down to binding
+                self.set_scroll(-480)
+                self.position = 4
+                self.optionsField[8].y = 106 - self.scroll_value
+
+            effect.play(effect.choose)
+
+        if symbol == key.DOWN:
+            if self.position == 0:
+                self.position = 1
+                self.optionsField[8].y = 476 - self.scroll_value
+
+            elif self.position == 1:
+                self.position = 2
+                self.optionsField[8].y = 386 - self.scroll_value
+
+            elif self.position == 2:
+                self.set_scroll(-480)
+                self.position = 3
+                self.optionsField[8].y = 193 - self.scroll_value
+
+            elif self.position == 3:
+                self.position = 4
+                self.optionsField[8].y = 106 - self.scroll_value
+
+            elif self.position == 4:
+                self.set_scroll(-960)
+                self.position = 5
+
+            effect.play(effect.choose)
+
+        delay = 0.3
+        if symbol == key.RIGHT:
+            if self.position == 0:
+                self.move_knob_by_keyboard(0, 1, 31.5, 998)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=1, movement_value=31.5, max_value=998)
+
+            if self.position == 1:
+                self.move_knob_by_keyboard(0, 2, 31.5, 998)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=2, movement_value=31.5, max_value=998)
+
+            if self.position == 2:
+                self.move_knob_by_keyboard(0, 3, 31.5, 998)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=3, movement_value=31.5, max_value=998)
+
+            if self.position == 3:
+                self.move_knob_by_keyboard(0, 4, 6.3, 998)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=4, movement_value=6.3, max_value=998)
+
+            if self.position == 4:
+                self.move_knob_by_keyboard(0, 5, 6.3, 998)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=5, movement_value=6.3, max_value=998)
+
+        if symbol == key.LEFT:
+            if self.position == 0:
+                self.move_knob_by_keyboard(0, 1, -31.5, 368)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=1, movement_value=-31.5, max_value=368)
+
+            if self.position == 1:
+                self.move_knob_by_keyboard(0, 2, -31.5, 368)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=2, movement_value=-31.5, max_value=368)
+
+            if self.position == 2:
+                self.move_knob_by_keyboard(0, 3, -31.5, 368)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=3, movement_value=-31.5, max_value=368)
+
+            if self.position == 3:
+                self.move_knob_by_keyboard(0, 4, -6.3, 368)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=4, movement_value=-6.3, max_value=368)
+
+            if self.position == 4:
+                self.move_knob_by_keyboard(0, 5, -6.3, 368)
+                pyglet.clock.schedule_once(self.knob_set_delay, delay,
+                                           knob_number=5, movement_value=-6.3, max_value=368)
+
+    def knob_set_delay(self, dt, knob_number, movement_value, max_value):  # for making delay before calling move
+        pyglet.clock.schedule_interval(self.move_knob_by_keyboard, 0.05,
+                                       knob_number=knob_number, movement_value=movement_value, max_value=max_value)  #
 
 
 class Data:
