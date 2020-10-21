@@ -1,5 +1,6 @@
 import pyglet
 from tkinter import *
+import tkinter.messagebox
 from pyglet.window import key, mouse
 import random
 
@@ -414,6 +415,20 @@ class Shop:
         self.shopBatch = pyglet.graphics.Batch()
         self.shopBatchField = []
 
+        self.price_sheet = {
+            'BBS': 'basic',
+            'BFG': 'fog',
+            'BIN': 'invisible',
+            'BJG': 'JuicyGreen',
+            'BBR': 'BloodyRed',
+
+            'FBS': 'basic',
+
+            'IDF': 'DarkForest',
+
+            'SPD': 'Payday'
+        }
+
         self.interface = self.create_shop_object("textures/interface/Shop.png")
         self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
                                           x=1000, y=760, font="Copperplate Gothic Bold", font_size=26,
@@ -440,7 +455,7 @@ class Shop:
                             (self.decipher(stats.data.data[25].strip('\n'))), loop=False)
 
     @staticmethod
-    def decipher(code):
+    def decipher(tag):
         return {
             'BBS': 'basic',
             'BFG': 'fog',
@@ -450,11 +465,31 @@ class Shop:
 
             'FBS': 'basic',
 
+            'IBS': 'basic',
             'IDF': 'DarkForest',
 
+            'SBS': 'basic',
             'SPD': 'Payday'
 
-        }.get(code)
+        }.get(tag)
+
+    @staticmethod
+    def price(tag):
+        return {
+            'BBS': 0,
+            'BFG': 5000,
+            'BIN': 10000,
+            'BJG': 1000,
+            'BBR': 1000,
+
+            'FBS': 0,
+
+            'IBS': 0,
+            'IDF': 6000,
+
+            'SBS': 0,
+            'SPD': 8000
+        }.get(tag)
 
     def create_shop_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
@@ -493,6 +528,23 @@ class Stats:
                                                              y=-500 - self.scroll_value))
         self.draw_values()
 
+    def security_check(self, dt):
+        root = Tk()
+
+        all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(
+            self.data.data[34])
+        all_item_prices = 0
+
+        for i in range(4):
+            for j in self.data.data[18 + i].strip("\n").split(", "):
+                all_item_prices += Shop.price(j)
+
+        if self.data.data[17] != all_snakies - all_item_prices:
+            tkinter.messagebox.showwarning("Data corrupted", "How dare you alter the data of this game!")
+            root.destroy()
+
+        root.mainloop()
+
     def create_stats_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
                                     x=x, y=y,
@@ -508,13 +560,14 @@ class Stats:
 
     def draw_values(self):
         o_y = 602
-        all_food = int(self.data.data[9]) + int(self.data.data[10]) + int(self.data.data[11]) + int(self.data.data[12])
+        all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(self.data.data[34])
 
         for i in range(4):
             best = int(self.data.data[1+i])
             games = int(self.data.data[5+i])
             food = int(self.data.data[9+i])
             playtime = int(self.data.data[13+i])
+            snakies_count = int(self.data.data[31+i])
 
             self.create_value(best, 600, o_y - 287*i - self.scroll_value, self.statsBatch)
             self.create_value(games, 600, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
@@ -522,14 +575,29 @@ class Stats:
             self.create_value(self.create_time(playtime), 600, o_y - 51*3 - 287*i - self.scroll_value, self.statsBatch)
 
             """ avg. score, avg. playtime, avg time / food, income percentage """
-            self.create_value(round(food / games, 1),
-                              1160, o_y - 287*i - self.scroll_value, self.statsBatch)
-            self.create_value(self.create_time(playtime / games),
-                              1160, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
-            self.create_value("{} s".format(round(playtime / food, 1)),
-                              1160, o_y - 51*2 - 287*i - self.scroll_value, self.statsBatch)
-            self.create_value("{} %".format(round((food / all_food) * 100, 1)),
-                              1160, o_y - 51*3 - 287 * i - self.scroll_value, self.statsBatch)
+            if games != 0:
+                self.create_value(round(food / games, 1),
+                                  1160, o_y - 287*i - self.scroll_value, self.statsBatch)
+                self.create_value(self.create_time(playtime / games),
+                                  1160, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
+            else:
+                self.create_value(0,
+                                  1160, o_y - 287 * i - self.scroll_value, self.statsBatch)
+                self.create_value(self.create_time(0),
+                                  1160, o_y - 51 - 287 * i - self.scroll_value, self.statsBatch)
+
+            if food != 0:
+                self.create_value("{} s".format(round(playtime / food, 1)),
+                                  1160, o_y - 51*2 - 287*i - self.scroll_value, self.statsBatch)
+            else:
+                self.create_value("0 s",
+                                  1160, o_y - 51 * 2 - 287 * i - self.scroll_value, self.statsBatch)
+
+            if all_snakies != 0:
+                self.create_value("{} %".format(round((snakies_count / all_snakies) * 100, 1)),
+                                  1160, o_y - 51*3 - 287 * i - self.scroll_value, self.statsBatch)
+            else:
+                self.create_value("0 %", 1160, o_y - 51 * 3 - 287 * i - self.scroll_value, self.statsBatch)
 
     def calculate_snakies(self, delte=False):
         if snake.difficulty == 0:
@@ -1005,10 +1073,11 @@ class Data:
                         "0\n", "0\n", "0\n", "0\n",
                         "0\n", "0\n", "0\n", "0\n",
                         "0\n",
-                        "0\n", "0\n", "0\n", "0\n",
+                        "BBS\n", "FBS\n", "IBS\n", "SBS\n",
                         "BBS\n", "FBS\n", "IDF\n", "SPD\n",  # SPD IDF should later be SBS IBS (soundtrack/image basic)
                         "100\n", "100\n", "100\n",
-                        "10\n", "10\n"
+                        "10\n", "10\n",
+                        "0\n", "0\n", "0\n", "0\n"
                         ]
             for i in template:
                 file.write(i)
@@ -1285,7 +1354,11 @@ class Snake:
         stats.data.write_data_addition(5 + self.difficulty, 1)  # games played
         stats.data.write_data_addition(9 + self.difficulty, self.food_count - 3)  # food eaten
         stats.data.write_data_addition(13 + self.difficulty, int(self.time_played))  # playtime
-        stats.data.write_data_addition(17, stats.calculate_snakies())
+
+        snakies = stats.calculate_snakies()
+        stats.data.write_data_addition(17, snakies)
+        stats.data.write_data_addition(31 + self.difficulty, snakies)
+
         stats.data.store_data()
 
         window.set_mouse_visible(True)
@@ -1395,4 +1468,5 @@ if __name__ == '__main__':
     """ Start things """
     window.call_menu()
     shop.menuM.play()
+    pyglet.clock.schedule_once(stats.security_check, 0.01)  # security check
     pyglet.app.run()

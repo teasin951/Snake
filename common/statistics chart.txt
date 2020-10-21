@@ -29,3 +29,7 @@ music_in_use                -\\-
 effects_in_use              -\\-
 grid_opacity
 score_opacity
+easy_snakies                total collected snakies in this game mode
+normal_snakies
+hard_snakies
+impossible_snakies
