@@ -529,8 +529,6 @@ class Stats:
         self.draw_values()
 
     def security_check(self, dt):
-        root = Tk()
-
         all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(
             self.data.data[34])
         all_item_prices = 0
@@ -538,12 +536,11 @@ class Stats:
         for i in range(4):
             for j in self.data.data[18 + i].strip("\n").split(", "):
                 all_item_prices += Shop.price(j)
-
-        if self.data.data[17] != all_snakies - all_item_prices:
+        if int(self.data.data[17].strip("\n")) != all_snakies - all_item_prices:
+            root = Tk()
             tkinter.messagebox.showwarning("Data corrupted", "How dare you alter the data of this game!")
             root.destroy()
-
-        root.mainloop()
+            root.mainloop()
 
     def create_stats_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
