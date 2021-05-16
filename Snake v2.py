@@ -63,6 +63,9 @@ class Window(pyglet.window.Window):
         self.batch = pyglet.graphics.Batch()  # for main batch
         self.main_batch = []
 
+    def update(self, dt):
+        pass
+
     """ These should be called to initiate a different window """
     def call_menu(self):
         shop.background.prepare_movement(-200, -200)
@@ -1471,4 +1474,5 @@ if __name__ == '__main__':
     window.call_menu()
     media.play()
     pyglet.clock.schedule_once(stats.security_check, 0.01)  # security check
+    pyglet.clock.schedule_interval(window.update, 1/360)  # TODO temporary fix
     pyglet.app.run()
