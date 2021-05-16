@@ -1,3 +1,4 @@
+import os
 import pyglet
 from tkinter import *
 import tkinter.messagebox
@@ -75,10 +76,6 @@ class Window(pyglet.window.Window):
         pyglet.clock.schedule_interval(shop.background.scale, shop.background.call_time)
         self.screen_function = "Snake"
 
-        shop.menuM.stop()
-        shop.gameM.adjust(1.05)
-        shop.gameM.play()
-
         snake.start()
 
     def call_options(self):
@@ -88,6 +85,7 @@ class Window(pyglet.window.Window):
 
     def call_shop(self):
         shop.background.prepare_movement(-50, -250)
+        shop.refresh()
         pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
         self.screen_function = "Shop"
 
@@ -127,6 +125,8 @@ class Window(pyglet.window.Window):
             options.labelBatch.draw()
 
         elif self.screen_function == "Shop":
+            for i in shop.snakiesLabel:
+                i.draw()
             shop.shopBatch.draw()
 
         elif self.screen_function == "Stats":
@@ -208,9 +208,7 @@ class Window(pyglet.window.Window):
         if self.screen_function == "Options":
             options.leave_options()
 
-        shop.menuM.player.delete()
-        shop.gameM.player.delete()
-        shop.deathM.player.delete()
+        media.player.delete()
         effect.player.delete()
 
 
@@ -415,81 +413,74 @@ class Shop:
         self.shopBatch = pyglet.graphics.Batch()
         self.shopBatchField = []
 
-        self.price_sheet = {
-            'BBS': 'basic',
-            'BFG': 'fog',
-            'BIN': 'invisible',
-            'BJG': 'JuicyGreen',
-            'BBR': 'BloodyRed',
+        self.skin_names = []
+        self.skin_prices = []
+        self.skin_index = 0
 
-            'FBS': 'basic',
+        self.background_names = []
+        self.background_prices = []
+        self.background_index = 0
 
-            'IDF': 'DarkForest',
+        self.music_names = []
+        self.music_prices = []
+        self.music_index = 0
 
-            'SPD': 'Payday'
-        }
+        self.load_skins()
+
 
         self.interface = self.create_shop_object("textures/interface/Shop.png")
-        self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
-                                          x=1000, y=760, font="Copperplate Gothic Bold", font_size=26,
-                                          outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
-                                          outline_distance=1, batch=self.shopBatch)
+        self.snakiesLabel = None
 
         self.body = pyglet.resource.image('textures/body/{}.png'.format
-                                          (self.decipher(stats.data.data[22].strip('\n'))))
+                                          (stats.data.data[22].strip('\n')))
         center_image(self.body)
 
         self.food = pyglet.resource.image('textures/food/{}.png'.format
-                                          (self.decipher(stats.data.data[23].strip('\n'))))
+                                          (stats.data.data[23].strip('\n')))
         center_image(self.food)
 
         self.background = Animation('textures/background/{}.jpg'.format
-                                    (self.decipher(stats.data.data[24].strip('\n'))),
+                                    (stats.data.data[24].strip('\n')),
                                     -200, -200, call_time=0.01, duration=0.3, center=False)
 
-        self.menuM = Media('resources/music/Payday/{} M#1.wav'.format
-                           (self.decipher(stats.data.data[25].strip('\n'))))
-        self.gameM = Media('resources/music/Payday/{} G#1.wav'.format
-                           (self.decipher(stats.data.data[25].strip('\n'))))
-        self.deathM = Media('resources/music/Payday/{} D#1.wav'.format
-                            (self.decipher(stats.data.data[25].strip('\n'))), loop=False)
+    def load_skins(self):
+        # skins
+        file = os.listdir("textures/shop_skins")
+        for i in file:
+            i = i.strip(".png")
+            i = i.split("_")
+            self.skin_names.append(i[0])
+            self.skin_prices.append(i[1])
 
-    @staticmethod
-    def decipher(tag):
-        return {
-            'BBS': 'basic',
-            'BFG': 'fog',
-            'BIN': 'invisible',
-            'BJG': 'JuicyGreen',
-            'BBR': 'BloodyRed',
+        # backgrounds
+        file = os.listdir("textures/shop_background")  # for now incorrect prices
+        for i in file:
+            i = i.strip(".txt")
+            i = i.split("_")
+            self.background_names.append(i[0])
+            self.background_prices.append(i[1])
 
-            'FBS': 'basic',
+        # music
+        file = os.listdir("textures/shop_music")  # for now incorrect prices
+        for i in file:
+            i = i.strip(".txt")
+            i = i.split("_")
+            self.music_names.append(i[0])
+            self.music_prices.append(i[1])
 
-            'IBS': 'basic',
-            'IDF': 'DarkForest',
+    def check_price(self, tag):
+        if "B" == tag[0] or "F" == tag[0]:
+            return int(self.skin_prices[self.skin_names.index(tag)])
+        elif "I" == tag[0]:
+            return int(self.background_prices[self.background_names.index(tag)])
+        elif "S" == tag[0]:
+            return int(self.music_prices[self.music_names.index(tag)])
 
-            'SBS': 'basic',
-            'SPD': 'Payday'
-
-        }.get(tag)
-
-    @staticmethod
-    def price(tag):
-        return {
-            'BBS': 0,
-            'BFG': 5000,
-            'BIN': 10000,
-            'BJG': 1000,
-            'BBR': 1000,
-
-            'FBS': 0,
-
-            'IBS': 0,
-            'IDF': 6000,
-
-            'SBS': 0,
-            'SPD': 8000
-        }.get(tag)
+    def refresh(self):
+        self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
+                                          x=1000, y=760, font="Copperplate Gothic Bold", font_size=26,
+                                          outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                          outline_distance=1, batch=None)
 
     def create_shop_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
@@ -535,7 +526,7 @@ class Stats:
 
         for i in range(4):
             for j in self.data.data[18 + i].strip("\n").split(", "):
-                all_item_prices += Shop.price(j)
+                all_item_prices += shop.check_price(j)
         if int(self.data.data[17].strip("\n")) != all_snakies - all_item_prices:
             root = Tk()
             tkinter.messagebox.showwarning("Data corrupted", "How dare you alter the data of this game!")
@@ -762,8 +753,8 @@ class Options:
         self.optionsField[7].opacity = round(self.calculate_knob(4) * 255 / 100)
         snake.label.color = (255, 255, 255, round(self.calculate_knob(4) * 255 / 100))
 
-        shop.menuM.adjust_music_volume()
-        shop.gameM.adjust_music_volume()
+        media.adjust_music_volume()
+        media.adjust_music_volume()
         effect.adjust()
 
     def draw_knob_values(self):
@@ -791,7 +782,7 @@ class Options:
             if 25 < x < 195 and 735 - self.scroll_value < y < 780 - self.scroll_value:
                 if snake.game_state == -1:
                     window.screen_function = "Snake"
-                    shop.gameM.adjust(0.01)
+                    media.adjust(0.01)
                     snake.game_state = 1
                     for i in range(3):
                         stats.data.write_data_replace(26 + i, self.calculate_knob(i))
@@ -905,7 +896,7 @@ class Options:
         if symbol == key.ESCAPE:
             if snake.game_state == -1:
                 window.screen_function = "Snake"
-                shop.gameM.adjust(0.01)
+                media.adjust(0.01)
                 snake.game_state = 1
                 for i in range(3):
                     stats.data.write_data_replace(26 + i, self.calculate_knob(i))
@@ -1101,21 +1092,35 @@ class Data:
 
 
 class Media:
-    def __init__(self, file, loop: bool = True):
-        self.media = pyglet.media.load(file, streaming=True)
-
+    def __init__(self):
         self.player = pyglet.media.Player()
-        self.player.loop = loop
+
+        self.MenuM = pyglet.resource.media('resources/music/{} M.wav'.format
+                                           (stats.data.data[25].strip('\n')))
+        self.GameM = pyglet.resource.media('resources/music/{} G.wav'.format
+                                           (stats.data.data[25].strip('\n')))
+        self.DeathM = pyglet.resource.media('resources/music/{} D.wav'.format
+                                            (stats.data.data[25].strip('\n')))
 
     def play(self):
         self.player.next_source()
-        self.player.queue(self.media)
+        self.player.queue(self.pick())
 
         self.player.volume = int(stats.data.data[26].strip("\n")) * int(stats.data.data[27].strip("\n")) / 10000
         self.player.play()
 
-    def stop(self):
-        self.player.delete()
+    def pick(self):
+        if window.screen_function == "Snake" and snake.game_state == 1:
+            self.player.loop = True
+            yield self.GameM
+
+        elif window.screen_function == "Snake" and snake.game_state == 0:
+            self.player.loop = False
+            yield self.DeathM
+
+        else:
+            self.player.loop = True
+            yield self.MenuM
 
     def adjust(self, value):
         self.player.volume = self.player.volume * value
@@ -1129,8 +1134,8 @@ class Effects:
         self.player = pyglet.media.Player()
 
         # self.eat = pyglet.media.load(file, streaming=False)
-        self.choose = pyglet.media.load("resources/sounds/choose #1.wav", streaming=False)
-        self.enter = pyglet.media.load("resources/sounds/enter #1.wav", streaming=False)
+        self.choose = pyglet.resource.media("resources/sounds/choose #1.wav", streaming=False)
+        self.enter = pyglet.resource.media("resources/sounds/enter #1.wav", streaming=False)
 
         self.player.volume = int(stats.data.data[26].strip("\n")) * int(stats.data.data[28].strip("\n")) / 10000
 
@@ -1248,17 +1253,20 @@ class Snake:
         self.update_main_batch()
         window.set_mouse_visible(False)
 
+        media.adjust(1.05)
+        media.play()
+
     def pause(self):
         window.active_window = 0
         window.set_mouse_visible(True)
         pyglet.clock.unschedule(snake.move)
 
-        shop.gameM.adjust(0.01)
+        media.adjust(0.01)
 
     def play(self):
         window.active_window = 1
         window.set_mouse_visible(False)
-        shop.gameM.adjust(100)
+        media.adjust(100)
 
         if self.game_state == 1:
             pyglet.clock.schedule_interval(self.move, self.move_time)
@@ -1290,7 +1298,6 @@ class Snake:
         window.main_batch.clear()
         window.main_batch.append(pyglet.sprite.Sprite(shop.food, x=self.food_position[0], y=self.food_position[1],
                                                       batch=window.batch))
-        # window.main_batch += self.snake_field
 
     def check_for_direction(self):  # check if the snake is in proper position to change it's direction
         if self.block_coverage == 0 and \
@@ -1362,8 +1369,7 @@ class Snake:
         pyglet.clock.schedule_interval(death.fade, death.call_time)
         pyglet.clock.schedule_once(death_desc.appear, death_desc.call_time)
 
-        shop.deathM.play()
-        shop.gameM.stop()
+        media.play()
 
     def reset(self, call_menu=True):  # restart the game
         menu.last_difficulty = self.difficulty
@@ -1380,20 +1386,18 @@ class Snake:
             pyglet.clock.schedule_interval(shop.background.scale, shop.background.call_time)
 
             window.call_menu()
-            shop.deathM.stop()
-            shop.menuM.play()
+            media.play()
         else:
             self.difficulty = menu.last_difficulty
 
             self.start()
-            shop.deathM.stop()
-            shop.gameM.play()
+            media.play()
 
     def mouse_function(self, x, y, button):  # TODO not working yet
         if button == mouse.LEFT and 1100 < x < 1200 and 0 < y < 90:
             self.game_state = -1
             window.screen_function = "Options"
-            shop.gameM.adjust(100)
+            media.adjust(100)
 
     def keyboard_functions(self, symbol):
         if self.game_state == 1:  # if you are in the game and alive
@@ -1431,6 +1435,7 @@ if __name__ == '__main__':
     shop = Shop()
     options = Options()
     snake = Snake()
+    media = Media()
 
     effect = Effects()
 
@@ -1464,6 +1469,6 @@ if __name__ == '__main__':
 
     """ Start things """
     window.call_menu()
-    shop.menuM.play()
+    media.play()
     pyglet.clock.schedule_once(stats.security_check, 0.01)  # security check
     pyglet.app.run()
