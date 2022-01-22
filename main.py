@@ -11,7 +11,7 @@ def center_image(image):
     image.anchor_y = image.height // 2
 
 
-def outline_label(text, x, y, outline_distance, font, font_size, text_color, outline_color, batch):
+def outline_label(text, x, y, outline_distance, text_font, font_size, text_color, outline_color, batch):
     lizt = []
     main = pyglet.graphics.OrderedGroup(1)
     outlining = pyglet.graphics.OrderedGroup(0)
@@ -19,18 +19,18 @@ def outline_label(text, x, y, outline_distance, font, font_size, text_color, out
     for i in range(-1, 2):
         for j in range(-1, 2):
             lizt.append(pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
-                                          font_name=font, font_size=font_size,
+                                          font_name=text_font, font_size=font_size,
                                           color=outline_color, batch=batch, group=outlining,
                                           anchor_x='center', anchor_y='center'))
 
-    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=font,
+    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=text_font,
                                   font_size=font_size, color=text_color, batch=batch, group=main,
                                   anchor_x='center', anchor_y='center'))
 
     return lizt
 
 
-def outline_label_right(text, x, y, outline_distance, font, font_size, text_color, outline_color, batch):
+def outline_label_right(text, x, y, outline_distance, text_font, font_size, text_color, outline_color, batch):
     lizt = []
     main = pyglet.graphics.OrderedGroup(1)
     outlining = pyglet.graphics.OrderedGroup(0)
@@ -38,11 +38,11 @@ def outline_label_right(text, x, y, outline_distance, font, font_size, text_colo
     for i in range(-1, 2):
         for j in range(-1, 2):
             lizt.append(pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
-                                          font_name=font, font_size=font_size,
+                                          font_name=text_font, font_size=font_size,
                                           color=outline_color, batch=batch, group=outlining,
                                           anchor_x='right', anchor_y='center'))
 
-    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=font,
+    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=text_font,
                                   font_size=font_size, color=text_color, batch=batch, group=main,
                                   anchor_x='right', anchor_y='center'))
 
@@ -67,6 +67,7 @@ class Window(pyglet.window.Window):
         pass
 
     """ These should be called to initiate a different window """
+
     def call_menu(self):
         shop.background.prepare_movement(-200, -200)
         pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
@@ -432,7 +433,6 @@ class Shop:
 
         self.load_skins()
 
-
         self.interface = self.create_shop_object("textures/interface/Shop.png")
         self.snakiesLabel = None
 
@@ -483,7 +483,7 @@ class Shop:
 
     def refresh(self):
         self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
-                                          x=1000, y=760, font="Copperplate Gothic Bold", font_size=26,
+                                          x=1000, y=760, text_font="Copperplate Gothic Bold", font_size=26,
                                           outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                                           outline_distance=1, batch=None)
 
@@ -545,7 +545,7 @@ class Stats:
 
     def create_value(self, text, x, y, batch):
         value = outline_label_right("{}".format(text),
-                                    x=x, y=y, font="Copperplate Gothic Bold", font_size=26,
+                                    x=x, y=y, text_font="Copperplate Gothic Bold", font_size=26,
                                     outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                                     outline_distance=1, batch=batch)
 
@@ -556,23 +556,24 @@ class Stats:
         all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(self.data.data[34])
 
         for i in range(4):
-            best = int(self.data.data[1+i])
-            games = int(self.data.data[5+i])
-            food = int(self.data.data[9+i])
-            playtime = int(self.data.data[13+i])
-            snakies_count = int(self.data.data[31+i])
+            best = int(self.data.data[1 + i])
+            games = int(self.data.data[5 + i])
+            food = int(self.data.data[9 + i])
+            playtime = int(self.data.data[13 + i])
+            snakies_count = int(self.data.data[31 + i])
 
-            self.create_value(best, 600, o_y - 287*i - self.scroll_value, self.statsBatch)
-            self.create_value(games, 600, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
-            self.create_value(food, 600, o_y - 51*2 - 287*i - self.scroll_value, self.statsBatch)
-            self.create_value(self.create_time(playtime), 600, o_y - 51*3 - 287*i - self.scroll_value, self.statsBatch)
+            self.create_value(best, 600, o_y - 287 * i - self.scroll_value, self.statsBatch)
+            self.create_value(games, 600, o_y - 51 - 287 * i - self.scroll_value, self.statsBatch)
+            self.create_value(food, 600, o_y - 51 * 2 - 287 * i - self.scroll_value, self.statsBatch)
+            self.create_value(self.create_time(playtime), 600, o_y - 51 * 3 - 287 * i - self.scroll_value,
+                              self.statsBatch)
 
             """ avg. score, avg. playtime, avg time / food, income percentage """
             if games != 0:
                 self.create_value(round(food / games, 1),
-                                  1160, o_y - 287*i - self.scroll_value, self.statsBatch)
+                                  1160, o_y - 287 * i - self.scroll_value, self.statsBatch)
                 self.create_value(self.create_time(playtime / games),
-                                  1160, o_y - 51 - 287*i - self.scroll_value, self.statsBatch)
+                                  1160, o_y - 51 - 287 * i - self.scroll_value, self.statsBatch)
             else:
                 self.create_value(0,
                                   1160, o_y - 287 * i - self.scroll_value, self.statsBatch)
@@ -581,14 +582,14 @@ class Stats:
 
             if food != 0:
                 self.create_value("{} s".format(round(playtime / food, 1)),
-                                  1160, o_y - 51*2 - 287*i - self.scroll_value, self.statsBatch)
+                                  1160, o_y - 51 * 2 - 287 * i - self.scroll_value, self.statsBatch)
             else:
                 self.create_value("0 s",
                                   1160, o_y - 51 * 2 - 287 * i - self.scroll_value, self.statsBatch)
 
             if all_snakies != 0:
                 self.create_value("{} %".format(round((snakies_count / all_snakies) * 100, 1)),
-                                  1160, o_y - 51*3 - 287 * i - self.scroll_value, self.statsBatch)
+                                  1160, o_y - 51 * 3 - 287 * i - self.scroll_value, self.statsBatch)
             else:
                 self.create_value("0 %", 1160, o_y - 51 * 3 - 287 * i - self.scroll_value, self.statsBatch)
 
@@ -632,16 +633,16 @@ class Stats:
     @staticmethod
     def create_time(value):
         data_sec = int(value)
-        hour = int(data_sec/3600)
-        mints = int(data_sec/60) - hour*60
-        sec = data_sec - mints*60 - hour*3600
+        hour = int(data_sec / 3600)
+        mints = int(data_sec / 60) - hour * 60
+        sec = data_sec - mints * 60 - hour * 3600
 
         if mints < 10:
             mints = "0{}".format(mints)
         if sec < 10:
             sec = "0{}".format(sec)
 
-        return"{}:{}:{}".format(hour, mints, sec)
+        return "{}:{}:{}".format(hour, mints, sec)
 
     def mouse_function(self, x, y, button):
         if button == mouse.LEFT:
@@ -742,7 +743,7 @@ class Options:
 
     def create_knob_value(self, x, y, knob_number, batch):
         value = outline_label("{} %".format(self.calculate_knob(knob_number)),
-                              x=x, y=y, font="Copperplate Gothic Bold", font_size=26,
+                              x=x, y=y, text_font="Copperplate Gothic Bold", font_size=26,
                               outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                               outline_distance=1, batch=batch)
 
@@ -763,11 +764,11 @@ class Options:
         effect.adjust()
 
     def draw_knob_values(self):
-        self.create_knob_value(1080, 564-self.scroll_value, 0, batch=self.labelBatch)
-        self.create_knob_value(1080, 478-self.scroll_value, 1, batch=self.labelBatch)
-        self.create_knob_value(1080, 390-self.scroll_value, 2, batch=self.labelBatch)
-        self.create_knob_value(1080, 196-self.scroll_value, 3, batch=self.labelBatch)
-        self.create_knob_value(1080, 110-self.scroll_value, 4, batch=self.labelBatch)
+        self.create_knob_value(1080, 564 - self.scroll_value, 0, batch=self.labelBatch)
+        self.create_knob_value(1080, 478 - self.scroll_value, 1, batch=self.labelBatch)
+        self.create_knob_value(1080, 390 - self.scroll_value, 2, batch=self.labelBatch)
+        self.create_knob_value(1080, 196 - self.scroll_value, 3, batch=self.labelBatch)
+        self.create_knob_value(1080, 110 - self.scroll_value, 4, batch=self.labelBatch)
 
     @staticmethod
     def set_knob(value):
@@ -809,11 +810,11 @@ class Options:
             elif 370 < x < 1000 and 370 - self.scroll_value < y < 403 - self.scroll_value:
                 self.optionsField[3].x = x
 
-            #click the fourth knob
+            # click the fourth knob
             elif 370 < x < 1000 and 176 - self.scroll_value < y < 208 - self.scroll_value:
                 self.optionsField[4].x = x
 
-            #click the fifth knob
+            # click the fifth knob
             elif 370 < x < 1000 and 90 - self.scroll_value < y < 122 - self.scroll_value:
                 self.optionsField[5].x = x
 
@@ -833,12 +834,12 @@ class Options:
                 self.position = 2
                 self.optionsField[8].y = 386 - self.scroll_value
 
-            #hover over the fourth knob
+            # hover over the fourth knob
             elif 100 < x < 1100 and 149 - self.scroll_value < y < 235 - self.scroll_value:
                 self.position = 3
                 self.optionsField[8].y = 193 - self.scroll_value
 
-            #hover over the fifth knob
+            # hover over the fifth knob
             elif 100 < x < 1100 and 63 - self.scroll_value < y < 149 - self.scroll_value:
                 self.position = 4
                 self.optionsField[8].y = 106 - self.scroll_value
@@ -1032,8 +1033,8 @@ class Data:
         except FileNotFoundError:
             return self.add_new_account(self.ask_for_name())
 
-
     """ This is a mess, but that's what tkinter does :) """
+
     def tkinter_shit(self, *args):
         self.return_your_name = self.e.get()
         self.root.destroy()
@@ -1053,25 +1054,25 @@ class Data:
 
         self.root.mainloop()
         return self.return_your_name
-    """ The end of the tkinter mess, have a nice day :)  """
 
+    """ The end of the tkinter mess, have a nice day :)  """
 
     @staticmethod
     def add_new_account(account_name):  # TODO
         with open("common/statistics.dat", "a") as file:
             template = [
-                        "{}\n".format(account_name),
-                        "0\n", "0\n", "0\n", "0\n",
-                        "0\n", "0\n", "0\n", "0\n",
-                        "0\n", "0\n", "0\n", "0\n",
-                        "0\n", "0\n", "0\n", "0\n",
-                        "0\n",
-                        "BBS\n", "FBS\n", "IBS\n", "SBS\n",
-                        "BBS\n", "FBS\n", "IDF\n", "SPD\n",  # SPD IDF should later be SBS IBS (soundtrack/image basic)
-                        "100\n", "100\n", "100\n",
-                        "10\n", "10\n",
-                        "0\n", "0\n", "0\n", "0\n"
-                        ]
+                "{}\n".format(account_name),
+                "0\n", "0\n", "0\n", "0\n",
+                "0\n", "0\n", "0\n", "0\n",
+                "0\n", "0\n", "0\n", "0\n",
+                "0\n", "0\n", "0\n", "0\n",
+                "0\n",
+                "BBS\n", "FBS\n", "IBS\n", "SBS\n",
+                "BBS\n", "FBS\n", "IDF\n", "SPD\n",  # SPD IDF should later be SBS IBS (soundtrack/image basic)
+                "100\n", "100\n", "100\n",
+                "10\n", "10\n",
+                "0\n", "0\n", "0\n", "0\n"
+            ]
             for i in template:
                 file.write(i)
 
@@ -1216,7 +1217,6 @@ class Animation:
     def appear(self, dt):
         self.object.opacity = self.amount
 
-
     def reset(self):
         self.time = 0
         self.object.opacity = 0
@@ -1241,18 +1241,18 @@ class Snake:
         self.new_step_direction = (10, 0)  # what is the new direction player gave TODO block size matters
         self.last_step_direction = (10, 0)  # where the snake moved last time TODO block size matters
 
-        self.label = pyglet.text.Label('{}'.format(self.food_count-3),
+        self.label = pyglet.text.Label('{}'.format(self.food_count - 3),
                                        font_size=540,
-                                       color=(255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
+                                       color=(
+                                       255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
         self.game_state = 0  # indication if you are alive or dead
-
 
     def start(self):
         for i in range(16):  # creates the starting snake TODO block size matters
             self.add_snake_body()
 
         self.game_state = 1
-        self.move_time = 0.02 - (self.difficulty*5)/1000
+        self.move_time = 0.02 - (self.difficulty * 5) / 1000
         self.spawn_food()
         pyglet.clock.schedule_interval(self.move, self.move_time)  # move with snake
         self.update_main_batch()
@@ -1326,7 +1326,7 @@ class Snake:
             self.loss()
 
         try:  # body collision check
-            self.circle_field.index(last_in_circle, 0, length_of_circle-1)
+            self.circle_field.index(last_in_circle, 0, length_of_circle - 1)
             self.loss()
         except ValueError:
             pass
@@ -1336,24 +1336,27 @@ class Snake:
 
             self.spawn_food()
             self.food_count += 1
-            self.label = pyglet.text.Label('{}'.format(self.food_count-3),
+            self.label = pyglet.text.Label('{}'.format(self.food_count - 3),
                                            font_size=540,
-                                           color=(255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # update label
+                                           color=(
+                                           255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # update label
             self.growth = 1
-            pyglet.clock.schedule_once(self.stop_grow, self.move_time*5)  # start cutting tail TODO block size matters
+            pyglet.clock.schedule_once(self.stop_grow, self.move_time * 5)  # start cutting tail TODO block size matters
 
     def stop_grow(self, dt):
         self.growth = 0
 
-    def move(self, dt):
-        self.check_for_direction()
-        self.add_snake_body()
-        self.collision()
-        if self.growth == 0:
-            self.take_snake_body()
+    def move(self, dt):  # has to be dependent on dt rather than function call
+        repeat = int(dt / {0: 0.02, 1: 0.015, 2: 0.01, 3: 0.005}.get(self.difficulty))  # calculate compensation
+        for i in range(repeat):  # to try to make it dependent on dt, it is not ideal though
+            self.check_for_direction()
+            self.add_snake_body()
+            self.collision()
+            if self.growth == 0:
+                self.take_snake_body()
 
         self.update_main_batch()
-        self.time_played += self.move_time
+        self.time_played += dt
 
     def loss(self):  # what if you lose
         pyglet.clock.unschedule(self.move)
@@ -1465,7 +1468,7 @@ if __name__ == '__main__':
     menu_arrow_1 = Animation('textures/interface/menu_arrow.png',
                              377, 405, call_time=0.01, duration=0.06)
     death = Animation('textures/interface/death.png',
-                      0, 0, call_time=1/84, duration=3, amount=1, center=False)
+                      0, 0, call_time=1 / 84, duration=3, amount=1, center=False)
     death_desc = Animation('textures/interface/death_description.png',
                            0, 0, call_time=3.5, amount=255, center=False)
 
@@ -1476,5 +1479,5 @@ if __name__ == '__main__':
     window.call_menu()
     media.play()
     pyglet.clock.schedule_once(stats.security_check, 0.01)  # security check
-    pyglet.clock.schedule_interval(window.update, 1/360)  # TODO temporary fix
+    pyglet.clock.schedule_interval(window.update, 1 / 360)  # TODO temporary fix
     pyglet.app.run()
