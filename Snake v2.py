@@ -354,6 +354,8 @@ class Menu:
                     menu_arrow_1.object.y -= 105
 
             elif symbol == key.SPACE and self.last_difficulty != -1:
+                menu_arrow_1.object.position = (377, 405)
+                self.highlighted_option = 0
                 self.snake_time(self.last_difficulty)
 
             elif symbol == key.RIGHT:
