@@ -3,6 +3,7 @@ import pyglet
 from tkinter import *
 import tkinter.messagebox
 from pyglet.window import key, mouse
+import numpy as np
 import random
 
 
@@ -12,41 +13,47 @@ def center_image(image):
 
 
 def outline_label(text, x, y, outline_distance, text_font, font_size, text_color, outline_color, batch):
-    lizt = []
+    textArray = np.zeros(10, dtype='object')
+    index = 0
+
     main = pyglet.graphics.OrderedGroup(1)
     outlining = pyglet.graphics.OrderedGroup(0)
 
     for i in range(-1, 2):
         for j in range(-1, 2):
-            lizt.append(pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
-                                          font_name=text_font, font_size=font_size,
-                                          color=outline_color, batch=batch, group=outlining,
-                                          anchor_x='center', anchor_y='center'))
+            textArray[index] = pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
+                                                 font_name=text_font, font_size=font_size,
+                                                 color=outline_color, batch=batch, group=outlining,
+                                                 anchor_x='center', anchor_y='center')
+            index += 1
 
-    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=text_font,
-                                  font_size=font_size, color=text_color, batch=batch, group=main,
-                                  anchor_x='center', anchor_y='center'))
+    textArray[index] = pyglet.text.Label(text=text, x=x, y=y, font_name=text_font,
+                                         font_size=font_size, color=text_color, batch=batch, group=main,
+                                         anchor_x='center', anchor_y='center')
 
-    return lizt
+    return textArray
 
 
 def outline_label_right(text, x, y, outline_distance, text_font, font_size, text_color, outline_color, batch):
-    lizt = []
+    textArray = np.zeros(10, dtype='object')
+    index = 0
+
     main = pyglet.graphics.OrderedGroup(1)
     outlining = pyglet.graphics.OrderedGroup(0)
 
     for i in range(-1, 2):
         for j in range(-1, 2):
-            lizt.append(pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
-                                          font_name=text_font, font_size=font_size,
-                                          color=outline_color, batch=batch, group=outlining,
-                                          anchor_x='right', anchor_y='center'))
+            textArray[index] = pyglet.text.Label(text=text, x=x + i * outline_distance, y=y + j * outline_distance,
+                                                 font_name=text_font, font_size=font_size,
+                                                 color=outline_color, batch=batch, group=outlining,
+                                                 anchor_x='right', anchor_y='center')
+            index += 1
 
-    lizt.append(pyglet.text.Label(text=text, x=x, y=y, font_name=text_font,
-                                  font_size=font_size, color=text_color, batch=batch, group=main,
-                                  anchor_x='right', anchor_y='center'))
+    textArray[index] = pyglet.text.Label(text=text, x=x, y=y, font_name=text_font,
+                                         font_size=font_size, color=text_color, batch=batch, group=main,
+                                         anchor_x='right', anchor_y='center')
 
-    return lizt
+    return textArray
 
 
 class Window(pyglet.window.Window):
@@ -132,6 +139,8 @@ class Window(pyglet.window.Window):
             for i in shop.snakiesLabel:
                 i.draw()
             shop.shopBatch.draw()
+            shop.skin_icons[shop.draw_skin_index].draw()
+            shop.highlights[shop.selection_position].draw()
 
         elif self.screen_function == "Stats":
             stats.statsBatch.draw()
@@ -170,7 +179,7 @@ class Window(pyglet.window.Window):
             options.mouse_function(x, y, button=None)
 
         elif self.screen_function == "Shop":
-            shop.mouse_function(x, y, button=0)
+            shop.mouse_function(x, y, button=None)
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         if self.screen_function == "Options":
@@ -369,7 +378,7 @@ class Menu:
                 window.close()
 
         else:
-            if symbol == key.ENTER:
+            if symbol == key.ENTER or symbol == key.RIGHT:
                 effect.play(effect.enter)
 
                 if self.highlighted_option == 0:
@@ -419,6 +428,11 @@ class Shop:
         self.shopBatch = pyglet.graphics.Batch()
         self.shopBatchField = []
 
+        self.selection_position = 0  # position of cursor
+        self.highlights = [pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Skins-highlight.png')),
+                           pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Background-highlight.png')),
+                           pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Audio-highlight.png'))]
+
         self.skin_names = []
         self.skin_prices = []
         self.skin_index = 0
@@ -429,9 +443,14 @@ class Shop:
 
         self.music_names = []
         self.music_prices = []
+        self.music_branding = []
         self.music_index = 0
 
-        self.load_skins()
+        self.skin_icons = []
+        self.draw_skin_index = 0  # where are we in the skins section
+        self.skin_position = (200, 290)
+
+        self.icons_load()
 
         self.interface = self.create_shop_object("textures/interface/Shop.png")
         self.snakiesLabel = None
@@ -448,30 +467,60 @@ class Shop:
                                     (stats.data.data[24].strip('\n')),
                                     -200, -200, call_time=0.01, duration=0.3, center=False)
 
-    def load_skins(self):
+    def move_skins_left(self):
+        if self.draw_skin_index > 0:
+            self.draw_skin_index -= 1  # this should thus change what icon is being drawn
+
+    def move_skins_right(self):
+        if self.draw_skin_index < len(self.skin_icons) - 1:
+            self.draw_skin_index += 1
+
+    ''' 
+    
+        This loads all icons and info for the shop and saves them into an array for later manipulation 
+        
+        All icons should be the size of normal snake window as they are scaled and manipulated with this expectancy,
+        Name has to follow this format {code name}_{price}.gif
+        
+        As backgrounds are loaded from textures and music is only text, shopsheet.dat holds data about both 
+        
+     '''
+    def icons_load(self):
         # skins
-        file = os.listdir("textures/shop_skins")
+        file = os.listdir("resources/skin icons")
         for i in file:
-            i = i.strip(".png")
+            anim = pyglet.resource.animation("resources/skin icons/{}".format(i))
+            anim = pyglet.sprite.Sprite(anim, x=self.skin_position[0], y=self.skin_position[1])
+            anim.scale = 0.65
+            self.skin_icons.append(anim)
+
+            i = i.strip(".gif")
             i = i.split("_")
             self.skin_names.append(i[0])
             self.skin_prices.append(i[1])
 
-        # backgrounds
-        file = os.listdir("textures/shop_background")  # for now incorrect prices
-        for i in file:
-            i = i.strip(".txt")
-            i = i.split("_")
-            self.background_names.append(i[0])
-            self.background_prices.append(i[1])
+        with open("resources/shopsheet.dat", 'r') as file:
+            data = file.readlines()
+            backgrounds = data[0]
+            music = data[1]
 
-        # music
-        file = os.listdir("resources/shop_music")  # for now incorrect prices
-        for i in file:
-            i = i.strip(".txt")
-            i = i.split("_")
-            self.music_names.append(i[0])
-            self.music_prices.append(i[1])
+            backgrounds = backgrounds.strip('\n')
+            music = music.strip('\n')
+            backgrounds = backgrounds.split(', ')
+            music = music.split(', ')
+
+            for i in range(len(backgrounds)):
+                backgrounds[i] = backgrounds[i].split('_')
+
+                self.background_names.append(backgrounds[i][0])
+                self.background_prices.append(backgrounds[i][1])
+
+            for i in range(len(music)):
+                music[i] = music[i].split('_')
+
+                self.music_names.append(music[i][0])
+                self.music_prices.append(music[i][1])
+                self.music_branding.append(music[i][2])
 
     def check_price(self, tag):
         if "B" == tag[0] or "F" == tag[0]:
@@ -498,10 +547,58 @@ class Shop:
                 window.call_menu()
                 effect.play(effect.enter)
 
+            elif 0 < x < 260 and 450 < y < 650:
+                self.move_skins_left()
+                effect.play(effect.choose)
+
+            elif 940 < x < 1200 and 450 < y < 650:
+                self.move_skins_right()
+                effect.play(effect.choose)
+
+        elif button is None:
+            if 410 < y < 660:
+                self.selection_position = 0
+
+            if 160 < y < 410:
+                self.selection_position = 1
+
+            if 0 < y < 160:
+                self.selection_position = 2
+
     def keyboard_function(self, symbol):
         if symbol == key.ESCAPE:
             window.call_menu()
             effect.play(effect.enter)
+
+        elif symbol == key.DOWN and self.selection_position < 2:
+            self.selection_position += 1
+            effect.play(effect.choose)
+
+        elif symbol == key.UP and self.selection_position > 0:
+            self.selection_position -= 1
+            effect.play(effect.choose)
+
+        elif symbol == key.LEFT:
+            if self.selection_position == 0:
+                self.move_skins_left()
+                effect.play(effect.choose)
+
+            elif self.selection_position == 1:
+                pass
+
+            elif self.selection_position == 2:
+                pass
+
+        elif symbol == key.RIGHT:
+            if self.selection_position == 0:
+                self.move_skins_right()
+                effect.play(effect.choose)
+
+            elif self.selection_position == 1:
+                pass
+
+            elif self.selection_position == 2:
+                pass
 
 
 class Stats:
@@ -553,7 +650,8 @@ class Stats:
 
     def draw_values(self):
         o_y = 602
-        all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(self.data.data[34])
+        all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(
+            self.data.data[34])
 
         for i in range(4):
             best = int(self.data.data[1 + i])
@@ -1222,7 +1320,7 @@ class Animation:
         self.object.opacity = 0
 
 
-class Snake:
+class Snake:   # TODO handeling of arrays move to numpy
     def __init__(self):
         """ There should be the game itself """
         self.food_count = 3
@@ -1243,8 +1341,7 @@ class Snake:
 
         self.label = pyglet.text.Label('{}'.format(self.food_count - 3),
                                        font_size=540,
-                                       color=(
-                                       255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
+                                       color=(255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
         self.game_state = 0  # indication if you are alive or dead
 
     def start(self):
@@ -1338,8 +1435,8 @@ class Snake:
             self.food_count += 1
             self.label = pyglet.text.Label('{}'.format(self.food_count - 3),
                                            font_size=540,
-                                           color=(
-                                           255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # update label
+                                           color=(255, 255, 255,
+                                                  round(options.calculate_knob(4) * 255 / 100)))  # update label
             self.growth = 1
             pyglet.clock.schedule_once(self.stop_grow, self.move_time * 5)  # start cutting tail TODO block size matters
 
@@ -1401,7 +1498,7 @@ class Snake:
             self.start()
             media.play()
 
-    def mouse_function(self, x, y, button):  # TODO not working yet
+    def mouse_function(self, x, y, button):
         if button == mouse.LEFT and 1100 < x < 1200 and 0 < y < 90:
             self.game_state = -1
             window.screen_function = "Options"
