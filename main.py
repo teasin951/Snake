@@ -5,6 +5,7 @@ import tkinter.messagebox
 from pyglet.window import key, mouse
 import numpy as np
 import random
+import json
 
 
 def center_image(image):
@@ -99,6 +100,7 @@ class Window(pyglet.window.Window):
         shop.refresh()
         pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
         self.screen_function = "Shop"
+        shop.update()
 
     def call_stats(self):
         shop.background.prepare_movement(-350, -220)
@@ -138,9 +140,12 @@ class Window(pyglet.window.Window):
         elif self.screen_function == "Shop":
             for i in shop.snakiesLabel:
                 i.draw()
-            shop.shopBatch.draw()
-            shop.skin_icons[shop.draw_skin_index].draw()
             shop.highlights[shop.selection_position].draw()
+            shop.skin_icons[shop.draw_skin_index].draw()
+            shop.background_icons[shop.draw_background_index].draw()
+            for i in shop.audio_labels[shop.draw_music_index]:
+                i.draw()
+            shop.shopBatch.draw()
 
         elif self.screen_function == "Stats":
             stats.statsBatch.draw()
@@ -425,6 +430,8 @@ class Menu:
 
 class Shop:
     def __init__(self):
+        self.json = self.load_shopsheet()
+
         self.shopBatch = pyglet.graphics.Batch()
         self.shopBatchField = []
 
@@ -433,24 +440,17 @@ class Shop:
                            pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Background-highlight.png')),
                            pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Audio-highlight.png'))]
 
-        self.skin_names = []
-        self.skin_prices = []
-        self.skin_index = 0
+        self.tick = pyglet.resource.image('textures/interface/tick.png')
 
-        self.background_names = []
-        self.background_prices = []
-        self.background_index = 0
-
-        self.music_names = []
-        self.music_prices = []
-        self.music_branding = []
-        self.music_index = 0
+        self.draw_skin_index = 0  # where are we in the skins section
+        self.draw_background_index = 0
+        self.draw_music_index = 0
 
         self.skin_icons = []
-        self.draw_skin_index = 0  # where are we in the skins section
-        self.skin_position = (200, 290)
+        self.background_icons = []
+        self.audio_labels = []
 
-        self.icons_load()
+        self.load_icons()
 
         self.interface = self.create_shop_object("textures/interface/Shop.png")
         self.snakiesLabel = None
@@ -470,65 +470,208 @@ class Shop:
     def move_skins_left(self):
         if self.draw_skin_index > 0:
             self.draw_skin_index -= 1  # this should thus change what icon is being drawn
+            self.update()
 
     def move_skins_right(self):
         if self.draw_skin_index < len(self.skin_icons) - 1:
             self.draw_skin_index += 1
+            self.update()
 
-    ''' 
-    
-        This loads all icons and info for the shop and saves them into an array for later manipulation 
-        
-        All icons should be the size of normal snake window as they are scaled and manipulated with this expectancy,
-        Name has to follow this format {code name}_{price}.gif
-        
-        As backgrounds are loaded from textures and music is only text, shopsheet.dat holds data about both 
-        
-     '''
-    def icons_load(self):
-        # skins
-        file = os.listdir("resources/skin icons")
-        for i in file:
-            anim = pyglet.resource.animation("resources/skin icons/{}".format(i))
-            anim = pyglet.sprite.Sprite(anim, x=self.skin_position[0], y=self.skin_position[1])
-            anim.scale = 0.65
-            self.skin_icons.append(anim)
+    def move_background_left(self):
+        if self.draw_background_index > 0:
+            self.draw_background_index -= 1
+            self.update()
 
-            i = i.strip(".gif")
-            i = i.split("_")
-            self.skin_names.append(i[0])
-            self.skin_prices.append(i[1])
+    def move_background_right(self):
+        if self.draw_background_index < len(self.background_icons) - 1:
+            self.draw_background_index += 1
+            self.update()
 
-        with open("resources/shopsheet.dat", 'r') as file:
-            data = file.readlines()
-            backgrounds = data[0]
-            music = data[1]
+    def move_audio_left(self):
+        if self.draw_music_index > 0:
+            self.draw_music_index -= 1
+            self.update()
 
-            backgrounds = backgrounds.strip('\n')
-            music = music.strip('\n')
-            backgrounds = backgrounds.split(', ')
-            music = music.split(', ')
+    def move_audio_right(self):
+        if self.draw_music_index < len(self.audio_labels) - 1:
+            self.draw_music_index += 1
+            self.update()
 
-            for i in range(len(backgrounds)):
-                backgrounds[i] = backgrounds[i].split('_')
+    def display_tick(self, pos_index):
+        if pos_index == 0:
+            tick = pyglet.sprite.Sprite(self.tick, x=670, y=460, batch=self.shopBatch)
+            tick.scale = 0.1
+        elif pos_index == 1:
+            tick = pyglet.sprite.Sprite(self.tick, x=700, y=175, batch=self.shopBatch)
+            tick.scale = 0.12
+        else:
+            tick = pyglet.sprite.Sprite(self.tick, x=760, y=15, batch=self.shopBatch)
+            tick.scale = 0.1
 
-                self.background_names.append(backgrounds[i][0])
-                self.background_prices.append(backgrounds[i][1])
+        self.shopBatchField.append(tick)
 
-            for i in range(len(music)):
-                music[i] = music[i].split('_')
+    def display_price(self, pos_index):
+        print("price", pos_index)
 
-                self.music_names.append(music[i][0])
-                self.music_prices.append(music[i][1])
-                self.music_branding.append(music[i][2])
+    def display_highlight(self, pos_index):
+        print("highlight", pos_index)
 
-    def check_price(self, tag):
+    def update(self):
+        self.shopBatchField = []  # clear what is shown
+
+        skin_code = list(self.json["skins"].keys())[self.draw_skin_index]
+        bckg_code = list(self.json["background"].keys())[self.draw_background_index]
+        audio_code = list(self.json["music"].keys())[self.draw_music_index]
+
+        body_data = stats.data.data[18].strip('\n').split(', ')
+        food_data = stats.data.data[19].strip('\n').split(', ')
+        bckg_data = stats.data.data[20].strip('\n').split(', ')
+        audio_data = stats.data.data[21].strip('\n').split(', ')
+
+        ebody_data = stats.data.data[22].strip('\n').split(', ')
+        efood_data = stats.data.data[23].strip('\n').split(', ')
+        ebckg_data = stats.data.data[24].strip('\n').split(', ')
+        eaudio_data = stats.data.data[25].strip('\n').split(', ')
+
+        try:
+            body_data.index(skin_code)
+            self.display_tick(0)
+
+        except ValueError:
+            try:
+                food_data.index(skin_code)
+                self.display_tick(0)
+
+            except ValueError:
+                self.display_price(0)
+
+        try:
+            bckg_data.index(bckg_code)
+            self.display_tick(1)
+
+        except ValueError:
+            self.display_price(1)
+
+        try:
+            audio_data.index(audio_code)
+            self.display_tick(2)
+
+        except ValueError:
+            self.display_price(2)
+
+        try:
+            ebody_data.index(skin_code)
+            self.display_highlight(0)
+
+        except ValueError:
+            try:
+                efood_data.index(skin_code)
+                self.display_highlight(0)
+
+            except ValueError:
+                pass
+
+        try:
+            ebckg_data.index(bckg_code)
+            self.display_highlight(1)
+
+        except ValueError:
+            pass
+
+        try:
+            eaudio_data.index(audio_code)
+            self.display_highlight(2)
+
+        except ValueError:
+            pass
+
+    def buy_item(self):
+        skin_code = list(self.json["skins"].keys())[self.draw_skin_index]
+        bckg_code = list(self.json["background"].keys())[self.draw_background_index]
+        audio_code = list(self.json["music"].keys())[self.draw_music_index]
+
+        body_data = stats.data.data[18].strip('\n').split(', ')
+        food_data = stats.data.data[19].strip('\n').split(', ')
+        bckg_data = stats.data.data[20].strip('\n').split(', ')
+        audio_data = stats.data.data[21].strip('\n').split(', ')
+
+        if self.selection_position == 0:
+            try:
+                body_data.index(skin_code)
+                stats.data.write_data_replace(22, skin_code)
+                stats.data.store_data()
+                self.body = pyglet.resource.image('textures/body/{}.png'.format
+                                                  (stats.data.data[22].strip('\n')))
+                center_image(self.body)
+                self.update()
+
+            except ValueError:
+                try:
+                    food_data.index(skin_code)
+                    "equip food"
+
+                except ValueError:
+                    "buy skin"
+
+        elif self.selection_position == 1:
+            try:
+                bckg_data.index(bckg_code)
+                "equip background"
+
+            except ValueError:
+                "buy background"
+
+        elif self.selection_position == 2:
+            try:
+                audio_data.index(audio_code)
+                "equip audio"
+
+            except ValueError:
+                "buy audio"
+
+    '''
+        Load all skin icons mentioned in shopsheet.json into self.skin_icons
+    '''
+
+    def load_icons(self):
+        for obj in list(self.json["skins"].keys()):
+            skin = pyglet.sprite.Sprite(pyglet.resource.animation('resources/skin icons/{}.gif'.format(obj)),
+                                        x=200, y=290)
+            skin.scale = 0.65
+            self.skin_icons.append(skin)
+
+        for obj in list(self.json["background"].keys()):
+            bckg = pyglet.sprite.Sprite(pyglet.resource.image('textures/background/{}.jpg'.format(obj)),
+                                        x=460, y=190)
+            bckg.scale = 0.15
+            self.background_icons.append(bckg)
+
+        for obj in list(self.json["music"].keys()):
+            self.audio_labels.append(outline_label("{} - {}".format(self.json["music"][obj]["branding"],
+                                                                    self.json["music"][obj]["price"]),
+                                                   x=610, y=68,
+                                                   text_font="Copperplate Gothic Bold", font_size=26,
+                                                   outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                                   outline_distance=1, batch=None))
+
+    '''
+        Load info from json
+    '''
+
+    @staticmethod
+    def load_shopsheet():
+        with open("resources/shopsheet.json", 'r') as jFile:
+            return json.load(jFile)
+
+    def check_price(self, tag):  # TODO look up in json
         if "B" == tag[0] or "F" == tag[0]:
-            return int(self.skin_prices[self.skin_names.index(tag)])
+            return self.json["skins"][tag]
+
         elif "I" == tag[0]:
-            return int(self.background_prices[self.background_names.index(tag)])
+            return self.json["background"][tag]
+
         elif "S" == tag[0]:
-            return int(self.music_prices[self.music_names.index(tag)])
+            return self.json["music"][tag]["price"]
 
     def refresh(self):
         self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
@@ -555,7 +698,23 @@ class Shop:
                 self.move_skins_right()
                 effect.play(effect.choose)
 
-        elif button is None:
+            elif 0 < x < 260 and 150 < y < 370:
+                self.move_background_left()
+                effect.play(effect.choose)
+
+            elif 940 < x < 1200 and 150 < y < 370:
+                self.move_background_right()
+                effect.play(effect.choose)
+
+            elif 0 < x < 260 and 0 < y < 110:
+                self.move_audio_left()
+                effect.play(effect.choose)
+
+            elif 940 < x < 1200 and 0 < y < 110:
+                self.move_audio_right()
+                effect.play(effect.choose)
+
+        elif button is None:  # hovering over sections
             if 410 < y < 660:
                 self.selection_position = 0
 
@@ -581,24 +740,30 @@ class Shop:
         elif symbol == key.LEFT:
             if self.selection_position == 0:
                 self.move_skins_left()
-                effect.play(effect.choose)
 
             elif self.selection_position == 1:
-                pass
+                self.move_background_left()
 
             elif self.selection_position == 2:
-                pass
+                self.move_audio_left()
+
+            effect.play(effect.choose)
 
         elif symbol == key.RIGHT:
             if self.selection_position == 0:
                 self.move_skins_right()
-                effect.play(effect.choose)
 
             elif self.selection_position == 1:
-                pass
+                self.move_background_right()
 
             elif self.selection_position == 2:
-                pass
+                self.move_audio_right()
+
+            effect.play(effect.choose)
+
+        elif symbol == key.ENTER or symbol == key.NUM_ENTER:
+            self.buy_item()
+            effect.play(effect.enter)
 
 
 class Stats:
@@ -1156,7 +1321,7 @@ class Data:
     """ The end of the tkinter mess, have a nice day :)  """
 
     @staticmethod
-    def add_new_account(account_name):  # TODO
+    def add_new_account(account_name):
         with open("common/statistics.dat", "a") as file:
             template = [
                 "{}\n".format(account_name),
@@ -1320,7 +1485,7 @@ class Animation:
         self.object.opacity = 0
 
 
-class Snake:   # TODO handeling of arrays move to numpy
+class Snake:
     def __init__(self):
         """ There should be the game itself """
         self.food_count = 3
@@ -1329,7 +1494,7 @@ class Snake:   # TODO handeling of arrays move to numpy
         self.move_time = 0.02
 
         self.growth = 0  # indication if the snake should grow
-        self.snake_field = []  # snake Sprites live here
+        self.snake_field = []  # snake Sprites live here TODO numpy
         self.food_position = (0, 0)
 
         self.circle_field = []  # coordinates of snake bodies live here
@@ -1341,7 +1506,8 @@ class Snake:   # TODO handeling of arrays move to numpy
 
         self.label = pyglet.text.Label('{}'.format(self.food_count - 3),
                                        font_size=540,
-                                       color=(255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
+                                       color=(
+                                           255, 255, 255, round(options.calculate_knob(4) * 255 / 100)))  # score label
         self.game_state = 0  # indication if you are alive or dead
 
     def start(self):
@@ -1523,7 +1689,7 @@ class Snake:   # TODO handeling of arrays move to numpy
                 self.play()
 
         elif self.game_state == 0:  # if you are in the game and dead
-            if symbol == key.SPACE:
+            if symbol == key.SPACE or symbol == key.R:
                 self.reset(call_menu=False)
 
             elif symbol == key.ENTER:
