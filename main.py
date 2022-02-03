@@ -1,4 +1,3 @@
-import os
 import pyglet
 from tkinter import *
 import tkinter.messagebox
@@ -122,6 +121,9 @@ class Window(pyglet.window.Window):
         elif self.screen_function == "Snake":
             snake.label.draw()
             grid.draw()
+            snake.food_for_draw.draw()
+            # for i in snake.gen_nums_for_draw():
+            #     snake.snake_field[i].draw()
             self.batch.draw()
             pyglet.text.Label("{}".format(stats.calculate_snakies(delte=True)),
                               font_name="Calisto MT", font_size=12, x=600, y=16, anchor_x='center').draw()
@@ -725,7 +727,7 @@ class Shop:
                 self.selection_position = 2
 
     def keyboard_function(self, symbol):
-        if symbol == key.ESCAPE:
+        if symbol == key.ESCAPE or symbol == key.NUM_0:
             window.call_menu()
             effect.play(effect.enter)
 
@@ -922,7 +924,7 @@ class Stats:
             self.scroll_value += self.scroll_amount
 
     def keyboard_function(self, symbol):
-        if symbol == key.ESCAPE or symbol == key.LEFT:
+        if symbol == key.ESCAPE or symbol == key.LEFT or symbol == key.NUM_0:
             window.call_menu()
             effect.play(effect.enter)
 
@@ -1162,7 +1164,7 @@ class Options:
         self.redraw_labels()
 
     def keyboard_function(self, symbol):
-        if symbol == key.ESCAPE:
+        if symbol == key.ESCAPE or symbol == key.NUM_0:
             if snake.game_state == -1:
                 window.screen_function = "Snake"
                 media.adjust(0.01)
@@ -1492,12 +1494,16 @@ class Snake:
         self.time_played = 0
         self.difficulty = 0  # this will be changed by Menu(); 0 - easy, 1 - normal, 2 - hard, 3 - impossible
         self.move_time = 0.02
+        self.last_body = 0  # where the last sprite is drawn
+        self.snake_length = 0
+
+        self.food_for_draw = 0
 
         self.growth = 0  # indication if the snake should grow
-        self.snake_field = []  # snake Sprites live here TODO numpy
+        self.snake_field = np.zeros(2000, dtype='object')  # snake Sprites live here
         self.food_position = (0, 0)
 
-        self.circle_field = []  # coordinates of snake bodies live here
+        self.circle_field = []  # coordinates of snake bodies live here TODO numpy array
         self.circle_field.append((115, 475))  # this one is not drawn, but x+10 is
 
         self.block_coverage = 0  # to make sure snake doesn't change direction before it is in proper position
@@ -1518,7 +1524,7 @@ class Snake:
         self.move_time = 0.02 - (self.difficulty * 5) / 1000
         self.spawn_food()
         pyglet.clock.schedule_interval(self.move, self.move_time)  # move with snake
-        self.update_main_batch()
+        # self.update_main_batch()
         window.set_mouse_visible(False)
 
         media.adjust(1.05)
@@ -1539,18 +1545,40 @@ class Snake:
         if self.game_state == 1:
             pyglet.clock.schedule_interval(self.move, self.move_time)
 
+    def gen_nums_for_draw(self):
+        for i in range(self.last_body, self.last_body + self.snake_length):
+            if i < 2000:
+                yield i
+
+            else:
+                yield i - 2000
+
     def add_snake_body(self):
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take last coordinates of snake body
         self.circle_field.append((last_in_circle[0] + self.last_step_direction[0],
                                   last_in_circle[1] + self.last_step_direction[1]))  # append a new one
 
         last_in_circle = self.circle_field[len(self.circle_field) - 1]  # take the new last coordinates
-        self.snake_field.append(pyglet.sprite.Sprite(shop.body, x=last_in_circle[0], y=last_in_circle[1],
-                                                     batch=window.batch))  # add new snake_body to the snake_field
+        snake_field_position = self.last_body + self.snake_length
+
+        if snake_field_position > 1999:
+            snake_field_position -= 2000
+        self.snake_field[snake_field_position] = pyglet.sprite.Sprite(shop.body, x=last_in_circle[0],
+                                                                      y=last_in_circle[1], batch=window.batch)
+        self.snake_length += 1
 
     def take_snake_body(self):  # pop the last snake body and coordinates
         self.circle_field.pop(0)
-        self.snake_field.pop(0)
+
+        if self.last_body > 1999:
+            self.last_body -= 2000
+            self.snake_field[self.last_body] = 0
+            self.last_body += 1
+        else:
+            self.snake_field[self.last_body] = 0
+            self.last_body += 1
+
+        self.snake_length -= 1
 
     def spawn_food(self):
         self.food_position = (25 + random.randint(0, 23) * 50,
@@ -1560,12 +1588,7 @@ class Snake:
             self.circle_field.index(self.food_position)
             self.spawn_food()
         except ValueError:
-            pass
-
-    def update_main_batch(self):
-        window.main_batch.clear()
-        window.main_batch.append(pyglet.sprite.Sprite(shop.food, x=self.food_position[0], y=self.food_position[1],
-                                                      batch=window.batch))
+            self.food_for_draw = pyglet.sprite.Sprite(shop.food, x=self.food_position[0], y=self.food_position[1])
 
     def check_for_direction(self):  # check if the snake is in proper position to change it's direction
         if self.block_coverage == 0 and \
@@ -1609,16 +1632,16 @@ class Snake:
     def stop_grow(self, dt):
         self.growth = 0
 
-    def move(self, dt):  # has to be dependent on dt rather than function call
+    def move(self, dt):
         repeat = int(dt / {0: 0.02, 1: 0.015, 2: 0.01, 3: 0.005}.get(self.difficulty))  # calculate compensation
         for i in range(repeat):  # to try to make it dependent on dt, it is not ideal though
+            self.collision()
             self.check_for_direction()
             self.add_snake_body()
-            self.collision()
             if self.growth == 0:
                 self.take_snake_body()
 
-        self.update_main_batch()
+        # self.update_main_batch()
         self.time_played += dt
 
     def loss(self):  # what if you lose
@@ -1650,7 +1673,6 @@ class Snake:
 
         self.__init__()
         pyglet.clock.unschedule(self.move)
-        self.update_main_batch()
 
         if call_menu:
             shop.background.amount = 0.0085
@@ -1689,7 +1711,7 @@ class Snake:
                 self.play()
 
         elif self.game_state == 0:  # if you are in the game and dead
-            if symbol == key.SPACE or symbol == key.R:
+            if symbol == key.SPACE or symbol == key.R or symbol == key.NUM_0:
                 self.reset(call_menu=False)
 
             elif symbol == key.ENTER:
