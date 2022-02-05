@@ -6,6 +6,8 @@ import numpy as np
 import random
 import json
 
+import Create_Json
+
 
 def center_image(image):
     image.anchor_x = image.width // 2
@@ -457,16 +459,15 @@ class Shop:
         self.interface = self.create_shop_object("textures/interface/Shop.png")
         self.snakiesLabel = None
 
-        self.body = pyglet.resource.image('textures/body/{}.png'.format
-                                          (stats.data.data[22].strip('\n')))
+        self.body = pyglet.resource.image('textures/body/{}.png'.format(stats.data.data['body_in_use']))
         center_image(self.body)
 
         self.food = pyglet.resource.image('textures/food/{}.png'.format
-                                          (stats.data.data[23].strip('\n')))
+                                          (stats.data.data['food_in_use']))
         center_image(self.food)
 
         self.background = Animation('textures/background/{}.jpg'.format
-                                    (stats.data.data[24].strip('\n')),
+                                    (stats.data.data['background_in_use']),
                                     -200, -200, call_time=0.01, duration=0.3, center=False)
 
     def move_skins_left(self):
@@ -525,15 +526,15 @@ class Shop:
         bckg_code = list(self.json["background"].keys())[self.draw_background_index]
         audio_code = list(self.json["music"].keys())[self.draw_music_index]
 
-        body_data = stats.data.data[18].strip('\n').split(', ')
-        food_data = stats.data.data[19].strip('\n').split(', ')
-        bckg_data = stats.data.data[20].strip('\n').split(', ')
-        audio_data = stats.data.data[21].strip('\n').split(', ')
+        body_data = stats.data.data['bodies']
+        food_data = stats.data.data['foods']
+        bckg_data = stats.data.data['backgrounds']
+        audio_data = stats.data.data['soundtracks']
 
-        ebody_data = stats.data.data[22].strip('\n').split(', ')
-        efood_data = stats.data.data[23].strip('\n').split(', ')
-        ebckg_data = stats.data.data[24].strip('\n').split(', ')
-        eaudio_data = stats.data.data[25].strip('\n').split(', ')
+        ebody_data = stats.data.data['body_in_use']
+        efood_data = stats.data.data['food_in_use']
+        ebckg_data = stats.data.data['background_in_use']
+        eaudio_data = stats.data.data['soundtrack_in_use']
 
         try:
             body_data.index(skin_code)
@@ -592,18 +593,18 @@ class Shop:
         bckg_code = list(self.json["background"].keys())[self.draw_background_index]
         audio_code = list(self.json["music"].keys())[self.draw_music_index]
 
-        body_data = stats.data.data[18].strip('\n').split(', ')
-        food_data = stats.data.data[19].strip('\n').split(', ')
-        bckg_data = stats.data.data[20].strip('\n').split(', ')
-        audio_data = stats.data.data[21].strip('\n').split(', ')
+        body_data = stats.data.data['bodies']
+        food_data = stats.data.data['foods']
+        bckg_data = stats.data.data['backgrounds']
+        audio_data = stats.data.data['soundtracks']
 
         if self.selection_position == 0:
             try:
                 body_data.index(skin_code)
-                stats.data.write_data_replace(22, skin_code)
+                stats.data.data['body_in_use'] = skin_code
                 stats.data.store_data()
                 self.body = pyglet.resource.image('textures/body/{}.png'.format
-                                                  (stats.data.data[22].strip('\n')))
+                                                  (stats.data.data['body_in_use']))
                 center_image(self.body)
                 self.update()
 
@@ -676,7 +677,7 @@ class Shop:
             return self.json["music"][tag]["price"]
 
     def refresh(self):
-        self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data[17].strip("\n")),
+        self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data['snakies']),
                                           x=1000, y=760, text_font="Copperplate Gothic Bold", font_size=26,
                                           outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                                           outline_distance=1, batch=None)
@@ -789,14 +790,14 @@ class Stats:
         self.draw_values()
 
     def security_check(self, dt):
-        all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(
-            self.data.data[34])
+        all_snakies = self.data.data['easy_snakies'] + self.data.data['normal_snakies'] + \
+                      self.data.data['hard_snakies'] + self.data.data['impossible_snakies']
         all_item_prices = 0
 
         for i in range(4):
-            for j in self.data.data[18 + i].strip("\n").split(", "):
+            for j in self.data.data[self.data.indexed_data[22 + i]]:
                 all_item_prices += shop.check_price(j)
-        if int(self.data.data[17].strip("\n")) != all_snakies - all_item_prices:
+        if self.data.data['snakies'] != all_snakies - all_item_prices:
             root = Tk()
             tkinter.messagebox.showwarning("Data corrupted", "How dare you alter the data of this game!")
             root.destroy()
@@ -817,15 +818,15 @@ class Stats:
 
     def draw_values(self):
         o_y = 602
-        all_snakies = int(self.data.data[31]) + int(self.data.data[32]) + int(self.data.data[33]) + int(
-            self.data.data[34])
+        all_snakies = self.data.data['easy_snakies'] + self.data.data['normal_snakies'] + \
+                      self.data.data['hard_snakies'] + self.data.data['impossible_snakies']
 
         for i in range(4):
-            best = int(self.data.data[1 + i])
-            games = int(self.data.data[5 + i])
-            food = int(self.data.data[9 + i])
-            playtime = int(self.data.data[13 + i])
-            snakies_count = int(self.data.data[31 + i])
+            best = self.data.data[self.data.indexed_data[1 + i]]
+            games = self.data.data[self.data.indexed_data[5 + i]]
+            food = self.data.data[self.data.indexed_data[9 + i]]
+            playtime = self.data.data[self.data.indexed_data[13 + i]]
+            snakies_count = self.data.data[self.data.indexed_data[17 + i]]
 
             self.create_value(best, 600, o_y - 287 * i - self.scroll_value, self.statsBatch)
             self.create_value(games, 600, o_y - 51 - 287 * i - self.scroll_value, self.statsBatch)
@@ -971,19 +972,19 @@ class Options:
         self.create_options_object("textures/interface/Options.png", y=-1000,
                                    batch=self.optionsBatch, group=self.backgroundGroup)
         self.create_options_object("textures/interface/Options_knob.png",
-                                   x=self.set_knob(stats.data.data[26]), y=562, center=True,
+                                   x=self.set_knob(stats.data.data['master_in_use']), y=562, center=True,
                                    batch=self.optionsBatch, group=self.foregroundGroup)
         self.create_options_object("textures/interface/Options_knob.png",
-                                   x=self.set_knob(stats.data.data[27]), y=476, center=True,
+                                   x=self.set_knob(stats.data.data['music_in_use']), y=476, center=True,
                                    batch=self.optionsBatch, group=self.foregroundGroup)
         self.create_options_object("textures/interface/Options_knob.png",
-                                   x=self.set_knob(stats.data.data[28]), y=386, center=True,
+                                   x=self.set_knob(stats.data.data['effects_in_use']), y=386, center=True,
                                    batch=self.optionsBatch, group=self.foregroundGroup)
         self.create_options_object("textures/interface/Options_knob.png",
-                                   x=self.set_knob(stats.data.data[29]), y=193, center=True,
+                                   x=self.set_knob(stats.data.data['grid_opacity']), y=193, center=True,
                                    batch=self.optionsBatch, group=self.foregroundGroup)
         self.create_options_object("textures/interface/Options_knob.png",
-                                   x=self.set_knob(stats.data.data[30]), y=106, center=True,
+                                   x=self.set_knob(stats.data.data['score_opacity']), y=106, center=True,
                                    batch=self.optionsBatch, group=self.foregroundGroup)
 
         self.create_options_object("textures/interface/Options_grid.png", y=-1000,
@@ -1037,15 +1038,19 @@ class Options:
 
     @staticmethod
     def set_knob(value):
-        return round(int(value.strip("\n")) * 6.3 + 368)
+        return round(int(value) * 6.3 + 368)
 
     def calculate_knob(self, knob_number):
         return round((self.optionsField[1 + knob_number].x - 368) // 6.3)
 
     def leave_options(self):
         window.call_menu()
+        self.update_and_store_data()
+
+    def update_and_store_data(self):
         for i in range(5):
-            stats.data.write_data_replace(26 + i, self.calculate_knob(i))
+            set = {0: 'master_in_use', 1: 'music_in_use', 2: 'effects_in_use', 3: 'grid_opacity', 4: 'score_opacity'}
+            stats.data.data[set.get(i)] = self.calculate_knob(i)
         stats.data.store_data()
 
     def mouse_function(self, x, y, button):
@@ -1055,9 +1060,7 @@ class Options:
                     window.screen_function = "Snake"
                     media.adjust(0.01)
                     snake.game_state = 1
-                    for i in range(3):
-                        stats.data.write_data_replace(26 + i, self.calculate_knob(i))
-                    stats.data.store_data()
+                    self.update_and_store_data()
 
                 else:
                     self.leave_options()
@@ -1169,9 +1172,7 @@ class Options:
                 window.screen_function = "Snake"
                 media.adjust(0.01)
                 snake.game_state = 1
-                for i in range(3):
-                    stats.data.write_data_replace(26 + i, self.calculate_knob(i))
-                stats.data.store_data()
+                self.update_and_store_data()
 
             else:
                 self.leave_options()
@@ -1288,15 +1289,22 @@ class Data:
     def __init__(self):
         """ This should save best scores and whatever else is needed """
         self.data = self.read_data()  # because I know where every data lays I will just look for it under an index
+        self.indexed_data = list(self.data)
 
     def read_data(self):
         try:
-            with open("common/statistics.dat", "r") as file:
-                return file.readlines()
+            with open("common/statistics.json", "r") as jFile:
+                return json.load(jFile)
 
         # if you start the snake for the first time
         except FileNotFoundError:
-            return self.add_new_account(self.ask_for_name())
+            self.add_new_account(self.ask_for_name())
+            with open("common/statistics.json", 'r') as jFile:
+                return json.load(jFile)
+
+    def store_data(self):
+        with open("common/statistics.json", "w") as file:
+            json.dump(self.data, file)
 
     """ This is a mess, but that's what tkinter does :) """
 
@@ -1324,42 +1332,11 @@ class Data:
 
     @staticmethod
     def add_new_account(account_name):
-        with open("common/statistics.dat", "a") as file:
-            template = [
-                "{}\n".format(account_name),
-                "0\n", "0\n", "0\n", "0\n",
-                "0\n", "0\n", "0\n", "0\n",
-                "0\n", "0\n", "0\n", "0\n",
-                "0\n", "0\n", "0\n", "0\n",
-                "0\n",
-                "BBS\n", "FBS\n", "IBS\n", "SBS\n",
-                "BBS\n", "FBS\n", "IDF\n", "SPD\n",  # SPD IDF should later be SBS IBS (soundtrack/image basic)
-                "100\n", "100\n", "100\n",
-                "10\n", "10\n",
-                "0\n", "0\n", "0\n", "0\n"
-            ]
-            for i in template:
-                file.write(i)
+        Create_Json.add_new_account(account_name)
 
-            return template
-
-    def write_data_addition(self, position, new_value):
-        self.data[position] = str(int(self.data[position].strip("\n")) + new_value) + "\n"
-
-    def write_data_append(self, position, new_value):
-        self.data[position] = self.data[position].strip("\n") + ", " + str(new_value) + "\n"
-
-    def write_data_score(self, position, score):
-        if int(self.data[position]) < score:
-            self.data[position] = str(score) + "\n"
-
-    def write_data_replace(self, position, new_value):
-        self.data[position] = str(new_value) + "\n"
-
-    def store_data(self):
-        with open("common/statistics.dat", "w") as file:
-            for i in self.data:
-                file.write(i)
+    def write_data_score(self, position, score):  # for storing the best score
+        if self.data[position] < score:
+            self.data[position] = score
 
 
 class Media:
@@ -1367,17 +1344,17 @@ class Media:
         self.player = pyglet.media.Player()
 
         self.MenuM = pyglet.resource.media('resources/music/{} M.wav'.format
-                                           (stats.data.data[25].strip('\n')))
+                                           (stats.data.data['soundtrack_in_use']))
         self.GameM = pyglet.resource.media('resources/music/{} G.wav'.format
-                                           (stats.data.data[25].strip('\n')))
+                                           (stats.data.data['soundtrack_in_use']))
         self.DeathM = pyglet.resource.media('resources/music/{} D.wav'.format
-                                            (stats.data.data[25].strip('\n')))
+                                            (stats.data.data['soundtrack_in_use']))
 
     def play(self):
         self.player.next_source()
         self.player.queue(self.pick())
 
-        self.player.volume = int(stats.data.data[26].strip("\n")) * int(stats.data.data[27].strip("\n")) / 10000
+        self.player.volume = stats.data.data['master_in_use'] * stats.data.data['music_in_use'] / 10000
         self.player.play()
 
     def pick(self):
@@ -1408,7 +1385,7 @@ class Effects:
         self.choose = pyglet.resource.media("resources/sounds/choose #1.wav", streaming=False)
         self.enter = pyglet.resource.media("resources/sounds/enter #1.wav", streaming=False)
 
-        self.player.volume = int(stats.data.data[26].strip("\n")) * int(stats.data.data[28].strip("\n")) / 10000
+        self.player.volume = stats.data.data['master_in_use'] * stats.data.data['effects_in_use'] / 10000
 
     def play(self, effect):
         self.player.next_source()
@@ -1648,14 +1625,14 @@ class Snake:
         pyglet.clock.unschedule(self.move)
         self.game_state = 0
 
-        stats.data.write_data_score(1 + self.difficulty, self.food_count - 3)  # best score
-        stats.data.write_data_addition(5 + self.difficulty, 1)  # games played
-        stats.data.write_data_addition(9 + self.difficulty, self.food_count - 3)  # food eaten
-        stats.data.write_data_addition(13 + self.difficulty, int(self.time_played))  # playtime
+        stats.data.write_data_score(stats.data.indexed_data[1 + self.difficulty], self.food_count - 3)  # best score
+        stats.data.data[stats.data.indexed_data[5 + self.difficulty]] += 1  # games played
+        stats.data.data[stats.data.indexed_data[9 + self.difficulty]] += self.food_count - 3  # food eaten
+        stats.data.data[stats.data.indexed_data[13 + self.difficulty]] += int(self.time_played)  # playtime
 
         snakies = stats.calculate_snakies()
-        stats.data.write_data_addition(17, snakies)
-        stats.data.write_data_addition(31 + self.difficulty, snakies)
+        stats.data.data['snakies'] += snakies
+        stats.data.data[stats.data.indexed_data[17 + self.difficulty]] += snakies
 
         stats.data.store_data()
 

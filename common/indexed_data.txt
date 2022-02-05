@@ -15,6 +15,10 @@ easy_playtime               add time played before death, total playtime in each
 normal_playtime             -\\-
 hard_playtime               -\\-
 impossible_playtime         -\\-
+easy_snakies                total collected snakies in this game mode
+normal_snakies              -\\-
+hard_snakies                -\\-
+impossible_snakies          -\\-
 snakies                     add after game, game currency
 bodies                      add if new bought, owned skins
 foods                       add if new bought, owned food skins
@@ -29,7 +33,3 @@ music_in_use                -\\-
 effects_in_use              -\\-
 grid_opacity
 score_opacity
-easy_snakies                total collected snakies in this game mode
-normal_snakies
-hard_snakies
-impossible_snakies
