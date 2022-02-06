@@ -1,17 +1,16 @@
 """
 
-This creates JSON files with info about names and prices of skins, background and audio
+This creates JSON files with all information necessary for main.py to work
 
-Skins key and price
-Music needs key, branding, and price
-Backgrounds need key and price
+I have separated this file for easier access and editing of any given information
 
 """
 
 import json
+from cryptography.fernet import Fernet
 
 
-def add_new_account(account_name):
+def add_new_account(account_name, key):
     stats = {
         "account_name": "{}".format(account_name),
 
@@ -58,11 +57,16 @@ def add_new_account(account_name):
         "score_opacity": 10,
     }
 
-    with open("common/statistics.json", 'w') as jFile:
-        json.dump(stats, jFile)
+    fernet = Fernet(key)
+
+    original = json.dumps(stats)
+    en_file = fernet.encrypt(bytes(original, 'utf-8'))
+
+    with open("common/statistics.json", 'wb') as jFile:
+        jFile.write(en_file)
 
 
-def create_shop_json():
+def create_shop_json(key):
     shop = {
         "skins": {
             "BBS": 0,
@@ -88,17 +92,14 @@ def create_shop_json():
         }
     }
 
-    with open("resources/shopsheet.json", 'w') as jFile:
-        json.dump(shop, jFile)
+    fernet = Fernet(key)
+
+    original = json.dumps(shop)
+    en_file = fernet.encrypt(bytes(original, 'utf-8'))
+
+    with open("resources/shopsheet.json", 'wb') as jFile:
+        jFile.write(en_file)
 
 
 if __name__ == '__main__':
-    # with open('common/statistics.json', 'r') as f:
-    #     file = json.load(f)
-    #
-    # print(list(file))
-    #
-    # with open('common/statistics.json', 'w') as f:
-    #     json.dump(file, f)
-
-    add_new_account('teasin951')
+    create_shop_json('tNXSr3w1v29_cBJhhN16BXNh_nVu7pmtD61KYnfmwK4=')  # TODO remove in the final version

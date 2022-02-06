@@ -2,6 +2,7 @@ import pyglet
 from tkinter import *
 import tkinter.messagebox
 from pyglet.window import key, mouse
+from cryptography.fernet import Fernet
 import numpy as np
 import random
 import json
@@ -124,8 +125,6 @@ class Window(pyglet.window.Window):
             snake.label.draw()
             grid.draw()
             snake.food_for_draw.draw()
-            # for i in snake.gen_nums_for_draw():
-            #     snake.snake_field[i].draw()
             self.batch.draw()
             pyglet.text.Label("{}".format(stats.calculate_snakies(delte=True)),
                               font_name="Calisto MT", font_size=12, x=600, y=16, anchor_x='center').draw()
@@ -522,9 +521,9 @@ class Shop:
     def update(self):
         self.shopBatchField = []  # clear what is shown
 
-        skin_code = list(self.json["skins"].keys())[self.draw_skin_index]
-        bckg_code = list(self.json["background"].keys())[self.draw_background_index]
-        audio_code = list(self.json["music"].keys())[self.draw_music_index]
+        skin_code = list(self.json["skins"])[self.draw_skin_index]
+        bckg_code = list(self.json["background"])[self.draw_background_index]
+        audio_code = list(self.json["music"])[self.draw_music_index]
 
         body_data = stats.data.data['bodies']
         food_data = stats.data.data['foods']
@@ -589,9 +588,9 @@ class Shop:
             pass
 
     def buy_item(self):
-        skin_code = list(self.json["skins"].keys())[self.draw_skin_index]
-        bckg_code = list(self.json["background"].keys())[self.draw_background_index]
-        audio_code = list(self.json["music"].keys())[self.draw_music_index]
+        skin_code = list(self.json["skins"])[self.draw_skin_index]
+        bckg_code = list(self.json["background"])[self.draw_background_index]
+        audio_code = list(self.json["music"])[self.draw_music_index]
 
         body_data = stats.data.data['bodies']
         food_data = stats.data.data['foods']
@@ -632,11 +631,13 @@ class Shop:
             except ValueError:
                 "buy audio"
 
-    '''
-        Load all skin icons mentioned in shopsheet.json into self.skin_icons
-    '''
-
     def load_icons(self):
+        """
+
+        Load all skin icons mentioned in shopsheet.json into self.skin_icons
+
+        """
+
         for obj in list(self.json["skins"].keys()):
             skin = pyglet.sprite.Sprite(pyglet.resource.animation('resources/skin icons/{}.gif'.format(obj)),
                                         x=200, y=290)
@@ -657,14 +658,19 @@ class Shop:
                                                    outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                                                    outline_distance=1, batch=None))
 
-    '''
-        Load info from json
-    '''
-
     @staticmethod
     def load_shopsheet():
-        with open("resources/shopsheet.json", 'r') as jFile:
-            return json.load(jFile)
+        """
+
+        Load info from json
+
+        """
+        with open("resources/shopsheet.json", 'rb') as jFile:
+            encrypted = jFile.read()
+
+        fernet = Fernet(stats.data.key)
+        decrypted = fernet.decrypt(encrypted).decode()
+        return json.loads(decrypted)
 
     def check_price(self, tag):  # TODO look up in json
         if "B" == tag[0] or "F" == tag[0]:
@@ -1288,23 +1294,32 @@ class Options:
 class Data:
     def __init__(self):
         """ This should save best scores and whatever else is needed """
+        self.key = 'tNXSr3w1v29_cBJhhN16BXNh_nVu7pmtD61KYnfmwK4='
+
         self.data = self.read_data()  # because I know where every data lays I will just look for it under an index
         self.indexed_data = list(self.data)
 
     def read_data(self):
         try:
-            with open("common/statistics.json", "r") as jFile:
-                return json.load(jFile)
+            with open("common/statistics.json", "rb") as jFile:
+                en_file = jFile.read()
+
+            fernet = Fernet(self.key)
+            decrypted = fernet.decrypt(en_file).decode()
+            return json.loads(decrypted)
 
         # if you start the snake for the first time
         except FileNotFoundError:
             self.add_new_account(self.ask_for_name())
-            with open("common/statistics.json", 'r') as jFile:
-                return json.load(jFile)
+            return self.read_data()
 
     def store_data(self):
-        with open("common/statistics.json", "w") as file:
-            json.dump(self.data, file)
+        fernet = Fernet(self.key)
+        original = json.dumps(self.data)
+        encrypted = fernet.encrypt(bytes(original, 'utf-8'))
+
+        with open("common/statistics.json", "wb") as file:
+            file.write(encrypted)
 
     """ This is a mess, but that's what tkinter does :) """
 
@@ -1330,9 +1345,8 @@ class Data:
 
     """ The end of the tkinter mess, have a nice day :)  """
 
-    @staticmethod
-    def add_new_account(account_name):
-        Create_Json.add_new_account(account_name)
+    def add_new_account(self, account_name):
+        Create_Json.add_new_account(account_name, self.key)
 
     def write_data_score(self, position, score):  # for storing the best score
         if self.data[position] < score:
