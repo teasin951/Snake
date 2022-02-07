@@ -39,7 +39,7 @@ def add_new_account(account_name, key):
         "hard_snakies": 0,
         "impossible_snakies": 0,
 
-        "snakies": 0,
+        "snakies": 10000,
         "bodies": ["BBS"],
         "foods": ["FBS"],
         "backgrounds": ["IBS"],
@@ -47,14 +47,14 @@ def add_new_account(account_name, key):
 
         "body_in_use": "BBS",
         "food_in_use": "FBS",
-        "background_in_use": "IDF",
+        "background_in_use": "IDF",  # TODO put these back to default!!
         "soundtrack_in_use": "SPD",
 
-        "master_in_use": 100,
-        "music_in_use": 100,
-        "effects_in_use": 100,
-        "grid_opacity": 10,
-        "score_opacity": 10,
+        "master_in_use": 30,
+        "music_in_use": 0,
+        "effects_in_use": 50,
+        "grid_opacity": 3,
+        "score_opacity": 12,
     }
 
     fernet = Fernet(key)
@@ -76,13 +76,13 @@ def create_shop_json(key):
         },
 
         "music": {
-            "SPD": {
-                "branding": "Payday Soundtrack",
-                "price": 8000
-            },
             "SBS": {
                 "branding": "Snake Original",
                 "price": 0
+            },
+            "SPD": {
+                "branding": "Payday Soundtrack",
+                "price": 8000
             }
         },
 
@@ -103,3 +103,4 @@ def create_shop_json(key):
 
 if __name__ == '__main__':
     create_shop_json('tNXSr3w1v29_cBJhhN16BXNh_nVu7pmtD61KYnfmwK4=')  # TODO remove in the final version
+    add_new_account('teasin951', 'tNXSr3w1v29_cBJhhN16BXNh_nVu7pmtD61KYnfmwK4=')

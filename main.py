@@ -1,6 +1,5 @@
 import pyglet
-from tkinter import *
-import tkinter.messagebox
+from tkinter import messagebox, Tk, Label, Entry
 from pyglet.window import key, mouse
 from cryptography.fernet import Fernet
 import numpy as np
@@ -8,6 +7,19 @@ import random
 import json
 
 import Create_Json
+
+
+def alert(title, message, kind='warning'):
+    if kind not in ('error', 'warning', 'info'):
+        raise ValueError('Unsupported alert kind.')
+
+    show_method = getattr(messagebox, 'show{}'.format(kind))
+    show_method(title, message)
+
+
+def yes_no(title, message):
+    show_method = getattr(messagebox, 'askquestion')
+    return show_method(title, message)
 
 
 def center_image(image):
@@ -141,14 +153,13 @@ class Window(pyglet.window.Window):
             options.labelBatch.draw()
 
         elif self.screen_function == "Shop":
-            for i in shop.snakiesLabel:
-                i.draw()
             shop.highlights[shop.selection_position].draw()
             shop.skin_icons[shop.draw_skin_index].draw()
             shop.background_icons[shop.draw_background_index].draw()
-            for i in shop.audio_labels[shop.draw_music_index]:
-                i.draw()
             shop.shopBatch.draw()
+            for i in shop.out_label_batch:
+                for j in i:
+                    j.draw()
 
         elif self.screen_function == "Stats":
             stats.statsBatch.draw()
@@ -436,12 +447,16 @@ class Shop:
         self.json = self.load_shopsheet()
 
         self.shopBatch = pyglet.graphics.Batch()
+        self.out_label_batch = []
         self.shopBatchField = []
 
         self.selection_position = 0  # position of cursor
         self.highlights = [pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Skins-highlight.png')),
                            pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Background-highlight.png')),
                            pyglet.sprite.Sprite(pyglet.resource.image('textures/interface/Audio-highlight.png'))]
+
+        self.equipped = pyglet.resource.image('textures/interface/highlight.png')
+        self.equipped_audio = pyglet.resource.image('textures/interface/highlightAudio.png')
 
         self.tick = pyglet.resource.image('textures/interface/tick.png')
 
@@ -495,31 +510,72 @@ class Shop:
             self.update()
 
     def move_audio_right(self):
-        if self.draw_music_index < len(self.audio_labels) - 1:
+        if self.draw_music_index < len(list(self.json['music'])) - 1:
             self.draw_music_index += 1
             self.update()
 
-    def display_tick(self, pos_index):
+    def display_tick(self, pos_index, code_name):
+        order = pyglet.graphics.OrderedGroup(1)
         if pos_index == 0:
-            tick = pyglet.sprite.Sprite(self.tick, x=670, y=460, batch=self.shopBatch)
+            tick = pyglet.sprite.Sprite(self.tick, x=670, y=460, batch=self.shopBatch, group=order)
             tick.scale = 0.1
         elif pos_index == 1:
-            tick = pyglet.sprite.Sprite(self.tick, x=700, y=175, batch=self.shopBatch)
+            tick = pyglet.sprite.Sprite(self.tick, x=700, y=175, batch=self.shopBatch, group=order)
             tick.scale = 0.12
         else:
-            tick = pyglet.sprite.Sprite(self.tick, x=760, y=15, batch=self.shopBatch)
+            tick = pyglet.sprite.Sprite(self.tick, x=760, y=15, batch=self.shopBatch, group=order)
             tick.scale = 0.1
+
+            self.out_label_batch.append(outline_label("{}".format(self.json["music"][code_name]["branding"]),
+                                                      x=610, y=68,
+                                                      text_font="Copperplate Gothic Bold", font_size=26,
+                                                      outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                                      outline_distance=1, batch=None))  # display music without price
 
         self.shopBatchField.append(tick)
 
-    def display_price(self, pos_index):
-        print("price", pos_index)
+    def display_price(self, pos_index, code_name):
+        if pos_index == 0:
+            self.out_label_batch.append(outline_label(str(self.json['skins'][code_name]), x=600, y=460,
+                                                      text_font="Copperplate Gothic Bold", font_size=26,
+                                                      outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                                      outline_distance=1, batch=None))
+
+        elif pos_index == 1:
+            self.out_label_batch.append(outline_label(str(self.json['background'][code_name]), x=600, y=210,
+                                                      text_font="Copperplate Gothic Bold", font_size=26,
+                                                      outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                                      outline_distance=1, batch=None))
+
+        elif pos_index == 2:
+            self.out_label_batch.append(outline_label("{} - {}".format(self.json["music"][code_name]["branding"],
+                                                                       self.json['music'][code_name]['price']),
+                                                      x=610, y=68,
+                                                      text_font="Copperplate Gothic Bold", font_size=26,
+                                                      outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                                      outline_distance=1, batch=None))
 
     def display_highlight(self, pos_index):
-        print("highlight", pos_index)
+        if pos_index == 0:
+            high = pyglet.sprite.Sprite(self.equipped, x=450, y=450, batch=self.shopBatch)
+            high.scale = 0.28
+            self.shopBatchField.append(high)
+
+        elif pos_index == 1:
+            high = pyglet.sprite.Sprite(self.equipped, x=452, y=182, batch=self.shopBatch)
+            high.scale = 0.302
+            self.shopBatchField.append(high)
+
+        elif pos_index == 2:
+            high = pyglet.sprite.Sprite(self.equipped_audio, x=335, y=40, batch=self.shopBatch)
+            high.scale = 0.55
+            high.scale_y = 0.55
+            self.shopBatchField.append(high)
 
     def update(self):
         self.shopBatchField = []  # clear what is shown
+        self.out_label_batch = []
+        self.refresh()
 
         skin_code = list(self.json["skins"])[self.draw_skin_index]
         bckg_code = list(self.json["background"])[self.draw_background_index]
@@ -537,29 +593,29 @@ class Shop:
 
         try:
             body_data.index(skin_code)
-            self.display_tick(0)
+            self.display_tick(0, skin_code)
 
         except ValueError:
             try:
                 food_data.index(skin_code)
-                self.display_tick(0)
+                self.display_tick(0, skin_code)
 
             except ValueError:
-                self.display_price(0)
+                self.display_price(0, skin_code)
 
         try:
             bckg_data.index(bckg_code)
-            self.display_tick(1)
+            self.display_tick(1, bckg_code)
 
         except ValueError:
-            self.display_price(1)
+            self.display_price(1, bckg_code)
 
         try:
             audio_data.index(audio_code)
-            self.display_tick(2)
+            self.display_tick(2, audio_code)
 
         except ValueError:
-            self.display_price(2)
+            self.display_price(2, audio_code)
 
         try:
             ebody_data.index(skin_code)
@@ -587,6 +643,15 @@ class Shop:
         except ValueError:
             pass
 
+    def confirm(self):
+        result = yes_no('Buy skin', 'Do you want to buy this skin?')
+        window.activate()
+
+        if result == 'yes':
+            return True
+        else:
+            return False
+
     def buy_item(self):
         skin_code = list(self.json["skins"])[self.draw_skin_index]
         bckg_code = list(self.json["background"])[self.draw_background_index]
@@ -610,10 +675,27 @@ class Shop:
             except ValueError:
                 try:
                     food_data.index(skin_code)
-                    "equip food"
+                    stats.data.data['food_in_use'] = skin_code
+                    stats.data.store_data()
+                    self.food = pyglet.resource.image('textures/food/{}.png'.format
+                                                      (stats.data.data['food_in_use']))
+                    center_image(self.body)
+                    self.update()
 
-                except ValueError:
-                    "buy skin"
+                except ValueError:  # if we do not own the skin
+                    if skin_code[0] == 'B':  # if it's a body skin
+                        price = self.json['skins'][skin_code]  # load price
+                        if price < stats.data.data['snakies']:  # if we can afford it
+                            if self.confirm():  # ask again if the user wants to buy the item
+                                stats.data.data['snakies'] -= price
+                                stats.data.data['bodies'].append(skin_code)
+                                stats.data.store_data()
+                                self.update()
+                            else:
+                                pass
+
+                    elif skin_code[0] == 'F':
+                        pass
 
         elif self.selection_position == 1:
             try:
@@ -638,25 +720,17 @@ class Shop:
 
         """
 
-        for obj in list(self.json["skins"].keys()):
+        for obj in list(self.json["skins"]):
             skin = pyglet.sprite.Sprite(pyglet.resource.animation('resources/skin icons/{}.gif'.format(obj)),
                                         x=200, y=290)
             skin.scale = 0.65
             self.skin_icons.append(skin)
 
-        for obj in list(self.json["background"].keys()):
+        for obj in list(self.json["background"]):
             bckg = pyglet.sprite.Sprite(pyglet.resource.image('textures/background/{}.jpg'.format(obj)),
                                         x=460, y=190)
             bckg.scale = 0.15
             self.background_icons.append(bckg)
-
-        for obj in list(self.json["music"].keys()):
-            self.audio_labels.append(outline_label("{} - {}".format(self.json["music"][obj]["branding"],
-                                                                    self.json["music"][obj]["price"]),
-                                                   x=610, y=68,
-                                                   text_font="Copperplate Gothic Bold", font_size=26,
-                                                   outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
-                                                   outline_distance=1, batch=None))
 
     @staticmethod
     def load_shopsheet():
@@ -683,10 +757,10 @@ class Shop:
             return self.json["music"][tag]["price"]
 
     def refresh(self):
-        self.snakiesLabel = outline_label("Snakies: {}".format(stats.data.data['snakies']),
+        self.out_label_batch.append(outline_label("Snakies: {}".format(stats.data.data['snakies']),
                                           x=1000, y=760, text_font="Copperplate Gothic Bold", font_size=26,
                                           outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
-                                          outline_distance=1, batch=None)
+                                          outline_distance=1, batch=None))
 
     def create_shop_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
@@ -804,10 +878,8 @@ class Stats:
             for j in self.data.data[self.data.indexed_data[22 + i]]:
                 all_item_prices += shop.check_price(j)
         if self.data.data['snakies'] != all_snakies - all_item_prices:
-            root = Tk()
-            tkinter.messagebox.showwarning("Data corrupted", "How dare you alter the data of this game!")
-            root.destroy()
-            root.mainloop()
+            alert('Data corrupted', 'How dare you alter the data of this game!')
+            window.activate()
 
     def create_stats_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
@@ -1311,6 +1383,7 @@ class Data:
         # if you start the snake for the first time
         except FileNotFoundError:
             self.add_new_account(self.ask_for_name())
+            window.activate()
             return self.read_data()
 
     def store_data(self):
@@ -1321,7 +1394,7 @@ class Data:
         with open("common/statistics.json", "wb") as file:
             file.write(encrypted)
 
-    """ This is a mess, but that's what tkinter does :) """
+    """ This is a mess, but that's what tkinter does :) """   # TODO tidy this up
 
     def tkinter_shit(self, *args):
         self.return_your_name = self.e.get()
@@ -1329,6 +1402,7 @@ class Data:
 
     def ask_for_name(self):
         self.root = Tk()
+        self.root.title('Account Creation')
         self.root.geometry("350x120")
 
         lab = Label(self.root, text="", font=65)
@@ -1752,6 +1826,7 @@ if __name__ == '__main__':
     menu_arrow_1.object.rotation, menu_arrow2.rotation = 180, 180
 
     """ Start things """
+    Tk().withdraw()
     window.call_menu()
     media.play()
     pyglet.clock.schedule_once(stats.security_check, 0.01)  # security check
