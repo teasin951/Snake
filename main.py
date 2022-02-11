@@ -663,55 +663,81 @@ class Shop:
         audio_data = stats.data.data['soundtracks']
 
         if self.selection_position == 0:
-            try:
+            try:  # equip body
                 body_data.index(skin_code)
                 stats.data.data['body_in_use'] = skin_code
                 stats.data.store_data()
                 self.body = pyglet.resource.image('textures/body/{}.png'.format
                                                   (stats.data.data['body_in_use']))
                 center_image(self.body)
-                self.update()
 
             except ValueError:
-                try:
+                try:  # equip food
                     food_data.index(skin_code)
                     stats.data.data['food_in_use'] = skin_code
                     stats.data.store_data()
                     self.food = pyglet.resource.image('textures/food/{}.png'.format
                                                       (stats.data.data['food_in_use']))
                     center_image(self.body)
-                    self.update()
 
                 except ValueError:  # if we do not own the skin
+                    price = self.json['skins'][skin_code]  # load price
                     if skin_code[0] == 'B':  # if it's a body skin
-                        price = self.json['skins'][skin_code]  # load price
                         if price < stats.data.data['snakies']:  # if we can afford it
                             if self.confirm():  # ask again if the user wants to buy the item
                                 stats.data.data['snakies'] -= price
                                 stats.data.data['bodies'].append(skin_code)
                                 stats.data.store_data()
-                                self.update()
-                            else:
-                                pass
 
                     elif skin_code[0] == 'F':
-                        pass
+                        if price < stats.data.data['snakies']:  # if we can afford it
+                            if self.confirm():  # ask again if the user wants to buy the item
+                                stats.data.data['snakies'] -= price
+                                stats.data.data['foods'].append(skin_code)
+                                stats.data.store_data()
 
         elif self.selection_position == 1:
-            try:
+            try:  # equip background
                 bckg_data.index(bckg_code)
-                "equip background"
+                stats.data.data['background_in_use'] = bckg_code
+                stats.data.store_data()
+                self.background = Animation('textures/background/{}.jpg'.format
+                                            (stats.data.data['background_in_use']),
+                                            -200, -200, call_time=0.01, duration=0.3, center=False)
+                shop.background.prepare_movement(-50, -250)
+                pyglet.clock.schedule_interval(shop.background.move, shop.background.call_time)
 
-            except ValueError:
-                "buy background"
+            except ValueError:  # buy background
+                price = self.json['background'][bckg_code]  # load price
+                if price < stats.data.data['snakies']:  # if we can afford it
+                    if self.confirm():  # ask again if the user wants to buy the item
+                        stats.data.data['snakies'] -= price
+                        stats.data.data['backgrounds'].append(bckg_code)
+                        stats.data.store_data()
 
         elif self.selection_position == 2:
-            try:
+            try:  # equip audio
                 audio_data.index(audio_code)
-                "equip audio"
+                stats.data.data['soundtrack_in_use'] = audio_code
+                stats.data.store_data()
 
-            except ValueError:
-                "buy audio"
+                media.MenuM = pyglet.resource.media('resources/music/{} M.wav'.format
+                                                    (stats.data.data['soundtrack_in_use']))
+                media.GameM = pyglet.resource.media('resources/music/{} G.wav'.format
+                                                    (stats.data.data['soundtrack_in_use']))
+                media.DeathM = pyglet.resource.media('resources/music/{} D.wav'.format
+                                                     (stats.data.data['soundtrack_in_use']))
+                media.play()
+
+            except ValueError:  # buy audio
+                price = self.json['music'][audio_code]['price']  # load price
+                if price < stats.data.data['snakies']:  # if we can afford it
+                    if self.confirm():  # ask again if the user wants to buy the item
+                        stats.data.data['snakies'] -= price
+                        stats.data.data['soundtracks'].append(audio_code)
+                        stats.data.store_data()
+
+        self.update()
 
     def load_icons(self):
         """
@@ -721,8 +747,13 @@ class Shop:
         """
 
         for obj in list(self.json["skins"]):
-            skin = pyglet.sprite.Sprite(pyglet.resource.animation('resources/skin icons/{}.gif'.format(obj)),
-                                        x=200, y=290)
+            try:
+                skin = pyglet.sprite.Sprite(pyglet.resource.animation('resources/skin icons/{}.gif'.format(obj)),
+                                            x=200, y=290)
+            except pyglet.resource.ResourceNotFoundException:
+                skin = pyglet.sprite.Sprite(pyglet.resource.image('resources/skin icons/{}.png'.format(obj)),
+                                            x=200, y=290)
+
             skin.scale = 0.65
             self.skin_icons.append(skin)
 
@@ -758,9 +789,9 @@ class Shop:
 
     def refresh(self):
         self.out_label_batch.append(outline_label("Snakies: {}".format(stats.data.data['snakies']),
-                                          x=1000, y=760, text_font="Copperplate Gothic Bold", font_size=26,
-                                          outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
-                                          outline_distance=1, batch=None))
+                                                  x=1000, y=760, text_font="Copperplate Gothic Bold", font_size=26,
+                                                  outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
+                                                  outline_distance=1, batch=None))
 
     def create_shop_object(self, path, x=0, y=0):
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
@@ -1394,7 +1425,7 @@ class Data:
         with open("common/statistics.json", "wb") as file:
             file.write(encrypted)
 
-    """ This is a mess, but that's what tkinter does :) """   # TODO tidy this up
+    """ This is a mess, but that's what tkinter does :) """  # TODO tidy this up
 
     def tkinter_shit(self, *args):
         self.return_your_name = self.e.get()

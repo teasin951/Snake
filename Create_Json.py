@@ -47,8 +47,8 @@ def add_new_account(account_name, key):
 
         "body_in_use": "BBS",
         "food_in_use": "FBS",
-        "background_in_use": "IDF",  # TODO put these back to default!!
-        "soundtrack_in_use": "SPD",
+        "background_in_use": "IBS",
+        "soundtrack_in_use": "SPD",  # TODO put this back to default!!
 
         "master_in_use": 30,
         "music_in_use": 0,
@@ -88,7 +88,8 @@ def create_shop_json(key):
 
         "background": {
             "IBS": 0,
-            "IDF": 5000
+            "IDF": 5000,
+            "ILR": 6000
         }
     }
 
