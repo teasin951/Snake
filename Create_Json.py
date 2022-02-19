@@ -39,7 +39,7 @@ def add_new_account(account_name, key):
         "hard_snakies": 0,
         "impossible_snakies": 0,
 
-        "snakies": 10000,
+        "snakies": 50000,
         "bodies": ["BBS"],
         "foods": ["FBS"],
         "backgrounds": ["IBS"],
@@ -48,9 +48,9 @@ def add_new_account(account_name, key):
         "body_in_use": "BBS",
         "food_in_use": "FBS",
         "background_in_use": "IBS",
-        "soundtrack_in_use": "SPD",  # TODO put this back to default!!
+        "soundtrack_in_use": "SBS",
 
-        "master_in_use": 30,
+        "master_in_use": 30,  # TODO put this back to default!!
         "music_in_use": 0,
         "effects_in_use": 50,
         "grid_opacity": 3,
@@ -71,14 +71,28 @@ def create_shop_json(key):
         "skins": {
             "BBS": 0,
             "BRD": 1000,
-            "BJG": 3000,
-            "FBS": 0
+            "BJG": 2000,
+            "FBS": 0,
+            "FAP": 3000,
+            "FCH": 3000
         },
 
         "music": {
             "SBS": {
                 "branding": "Snake Original",
                 "price": 0
+            },
+            "STR": {
+                "branding": "Full-on Tetris",
+                "price": 6000
+            },
+            "S8B": {
+                "branding": "8-bit jam",
+                "price": 8000
+            },
+            "S8R": {
+                "branding": "Retro 8 bits",
+                "price": 8000
             },
             "SPD": {
                 "branding": "Payday Soundtrack",

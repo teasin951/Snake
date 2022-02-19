@@ -687,7 +687,7 @@ class Shop:
                     stats.data.store_data()
                     self.food = pyglet.resource.image('textures/food/{}.png'.format
                                                       (stats.data.data['food_in_use']))
-                    center_image(self.body)
+                    center_image(self.food)
 
                 except ValueError:  # if we do not own the skin
                     price = self.json['skins'][skin_code]  # load price
