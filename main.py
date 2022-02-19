@@ -1,3 +1,4 @@
+import time
 import pyglet
 from tkinter import messagebox, Tk, Label, Entry
 from pyglet.window import key, mouse
@@ -446,6 +447,8 @@ class Shop:
     def __init__(self):
         self.json = self.load_shopsheet()
 
+        self.last_click = 0
+
         self.shopBatch = pyglet.graphics.Batch()
         self.out_label_batch = []
         self.shopBatchField = []
@@ -515,6 +518,7 @@ class Shop:
             self.update()
 
     def display_tick(self, pos_index, code_name):
+        """ Display ownership of a given item """
         order = pyglet.graphics.OrderedGroup(1)
         if pos_index == 0:
             tick = pyglet.sprite.Sprite(self.tick, x=670, y=460, batch=self.shopBatch, group=order)
@@ -535,6 +539,7 @@ class Shop:
         self.shopBatchField.append(tick)
 
     def display_price(self, pos_index, code_name):
+        """ Display price for current item """
         if pos_index == 0:
             self.out_label_batch.append(outline_label(str(self.json['skins'][code_name]), x=600, y=460,
                                                       text_font="Copperplate Gothic Bold", font_size=26,
@@ -556,6 +561,7 @@ class Shop:
                                                       outline_distance=1, batch=None))
 
     def display_highlight(self, pos_index):
+        """ Highlighting current shop group """
         if pos_index == 0:
             high = pyglet.sprite.Sprite(self.equipped, x=450, y=450, batch=self.shopBatch)
             high.scale = 0.28
@@ -573,6 +579,7 @@ class Shop:
             self.shopBatchField.append(high)
 
     def update(self):
+        """ update shop with current info """
         self.shopBatchField = []  # clear what is shown
         self.out_label_batch = []
         self.refresh()
@@ -644,6 +651,7 @@ class Shop:
             pass
 
     def confirm(self):
+        """ Seek confirmation from user """
         result = yes_no('Buy skin', 'Do you want to buy this skin?')
         window.activate()
 
@@ -653,6 +661,7 @@ class Shop:
             return False
 
     def buy_item(self):
+        """ buy or equip selected item """
         skin_code = list(self.json["skins"])[self.draw_skin_index]
         bckg_code = list(self.json["background"])[self.draw_background_index]
         audio_code = list(self.json["music"])[self.draw_music_index]
@@ -765,11 +774,7 @@ class Shop:
 
     @staticmethod
     def load_shopsheet():
-        """
-
-        Load info from json
-
-        """
+        """ Load info from json """
         with open("resources/shopsheet.json", 'rb') as jFile:
             encrypted = jFile.read()
 
@@ -777,7 +782,8 @@ class Shop:
         decrypted = fernet.decrypt(encrypted).decode()
         return json.loads(decrypted)
 
-    def check_price(self, tag):  # TODO look up in json
+    def check_price(self, tag):
+        """ Look up price of a given tag """
         if "B" == tag[0] or "F" == tag[0]:
             return self.json["skins"][tag]
 
@@ -788,23 +794,47 @@ class Shop:
             return self.json["music"][tag]["price"]
 
     def refresh(self):
+        """ refresh snakies label """
         self.out_label_batch.append(outline_label("Snakies: {}".format(stats.data.data['snakies']),
                                                   x=1000, y=760, text_font="Copperplate Gothic Bold", font_size=26,
                                                   outline_color=(255, 255, 255, 255), text_color=(0, 0, 0, 255),
                                                   outline_distance=1, batch=None))
 
     def create_shop_object(self, path, x=0, y=0):
+        """ simplifying sprite creating """
         return pyglet.sprite.Sprite(pyglet.resource.image(path),
                                     x=x, y=y,
                                     batch=self.shopBatch)
 
+    def doubleclick(self):
+        """ Handling double-clicking """
+        if self.last_click + 0.2 > time.perf_counter():
+            return True
+
+        else:
+            self.last_click = time.perf_counter()
+            return False
+
     def mouse_function(self, x, y, button):
+        """ Handling mouse input for shop """
         if button == mouse.LEFT:
-            if 25 < x < 195 and 735 < y < 780:
+            if 25 < x < 195 and 735 < y < 780:  # clicking back button
                 window.call_menu()
                 effect.play(effect.enter)
 
-            elif 0 < x < 260 and 450 < y < 650:
+            elif 440 < x < 770 and 450 < y < 650:  # double-clicking items
+                if self.doubleclick():
+                    self.buy_item()
+
+            elif 440 < x < 770 and 150 < y < 370:
+                if self.doubleclick():
+                    self.buy_item()
+
+            elif 400 < x < 850 and 0 < y < 110:
+                if self.doubleclick():
+                    self.buy_item()
+
+            elif 0 < x < 260 and 450 < y < 650:  # clicking on arrows
                 self.move_skins_left()
                 effect.play(effect.choose)
 
@@ -839,10 +869,10 @@ class Shop:
                 self.selection_position = 2
 
     def keyboard_function(self, symbol):
+        """ Handling keyboard input for shop """
         if symbol == key.ESCAPE or symbol == key.NUM_0:
             window.call_menu()
             effect.play(effect.enter)
-
         elif symbol == key.DOWN and self.selection_position < 2:
             self.selection_position += 1
             effect.play(effect.choose)
