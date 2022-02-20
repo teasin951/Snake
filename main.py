@@ -501,6 +501,8 @@ class Shop:
                                     (stats.data.data['background_in_use']),
                                     -200, -200, call_time=0.01, duration=0.3, center=False)
 
+
+
     def move_skins_left(self):
         if self.draw_skin_index > 0:
             self.draw_skin_index -= 1  # this should thus change what icon is being drawn
@@ -773,11 +775,12 @@ class Shop:
             try:
                 skin = pyglet.sprite.Sprite(pyglet.resource.animation('resources/skin icons/{}.gif'.format(obj)),
                                             x=200, y=290)
+                skin.scale = 0.65
             except pyglet.resource.ResourceNotFoundException:
-                skin = pyglet.sprite.Sprite(pyglet.resource.image('resources/skin icons/{}.png'.format(obj)),
-                                            x=200, y=290)
+                skin = pyglet.sprite.Sprite(pyglet.resource.image('textures/food/{}.png'.format(obj)),
+                                            x=546, y=480)
+                skin.scale = 0.5
 
-            skin.scale = 0.65
             self.skin_icons.append(skin)
 
         for obj in list(self.json["background"]):
@@ -1732,6 +1735,7 @@ class Snake:
             self.spawn_food()
         except ValueError:
             self.food_for_draw = pyglet.sprite.Sprite(shop.food, x=self.food_position[0], y=self.food_position[1])
+            self.food_for_draw.scale = 0.21
 
     def check_for_direction(self):  # check if the snake is in proper position to change its direction
         if self.block_coverage == 0 and \
