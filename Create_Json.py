@@ -49,9 +49,10 @@ def add_new_account(account_name, key):
         "food_in_use": "FBS",
         "background_in_use": "IBS",
         "soundtrack_in_use": "SBS",
+        "relative_mode": False,
 
         "master_in_use": 30,  # TODO put this back to default!!
-        "music_in_use": 0,
+        "music_in_use": 50,
         "effects_in_use": 50,
         "grid_opacity": 3,
         "score_opacity": 12,

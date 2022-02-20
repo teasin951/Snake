@@ -134,6 +134,9 @@ class Window(pyglet.window.Window):
                 menu_difficulty.draw()
                 menu_arrow2.draw()
 
+            if menu.play_state and stats.data.data['relative_mode']:
+                cross_relative.draw()
+
         elif self.screen_function == "Snake":
             snake.label.draw()
             grid.draw()
@@ -409,6 +412,9 @@ class Menu:
                     self.snake_time(2)
                 elif self.highlighted_option == 3:
                     self.snake_time(3)
+                elif self.highlighted_option == 4:
+                    stats.data.data['relative_mode'] = not stats.data.data['relative_mode']
+                    stats.data.store_data()
 
             if symbol == key.UP:
                 effect.play(effect.choose)
@@ -420,11 +426,11 @@ class Menu:
             elif symbol == key.DOWN:
                 effect.play(effect.choose)
 
-                if self.highlighted_option < 3:
+                if self.highlighted_option < 4:
                     self.highlighted_option += 1
                     menu_arrow2.y -= 95
 
-            elif symbol == key.LEFT:
+            elif symbol == key.LEFT or symbol == key.NUM_0:
                 effect.play(effect.enter)
 
                 menu_arrow_1.prepare_animation(amount=-10)
@@ -1624,6 +1630,7 @@ class Snake:
         self.snake_length = 0
 
         self.food_for_draw = 0
+        self.relative_mode = False
 
         self.growth = 0  # indication if the snake should grow
         self.snake_field = np.zeros(2000, dtype='object')  # snake Sprites live here
@@ -1643,6 +1650,8 @@ class Snake:
         self.game_state = 0  # indication if you are alive or dead
 
     def start(self):
+        self.relative_mode = stats.data.data['relative_mode']
+
         for i in range(16):  # creates the starting snake TODO block size matters
             self.add_snake_body()
 
@@ -1716,7 +1725,7 @@ class Snake:
         except ValueError:
             self.food_for_draw = pyglet.sprite.Sprite(shop.food, x=self.food_position[0], y=self.food_position[1])
 
-    def check_for_direction(self):  # check if the snake is in proper position to change it's direction
+    def check_for_direction(self):  # check if the snake is in proper position to change its direction
         if self.block_coverage == 0 and \
                 (self.last_step_direction != (-self.new_step_direction[0], -self.new_step_direction[1])):
             self.last_step_direction = self.new_step_direction
@@ -1812,6 +1821,15 @@ class Snake:
             self.start()
             media.play()
 
+    def set_new_direction_from_relative(self, side):
+        if side == "LEFT":
+            self.new_step_direction = {(10, 0): (0, 10), (0, 10): (-10, 0),
+                                       (-10, 0): (0, -10), (0, -10): (10, 0)}.get(self.last_step_direction)
+
+        elif side == "RIGHT":
+            self.new_step_direction = {(10, 0): (0, -10), (0, -10): (-10, 0),
+                                       (-10, 0): (0, 10), (0, 10): (10, 0)}.get(self.last_step_direction)
+
     def mouse_function(self, x, y, button):
         if button == mouse.LEFT and 1100 < x < 1200 and 0 < y < 90:
             self.game_state = -1
@@ -1821,14 +1839,21 @@ class Snake:
     def keyboard_functions(self, symbol):
         if self.game_state == 1:  # if you are in the game and alive
             if window.active_window == 1:
-                if symbol == key.UP or symbol == key.W:
-                    self.new_step_direction = (0, 10)
-                if symbol == key.DOWN or symbol == key.S:
-                    self.new_step_direction = (0, -10)
-                if symbol == key.LEFT or symbol == key.A:
-                    self.new_step_direction = (-10, 0)
-                if symbol == key.RIGHT or symbol == key.D:
-                    self.new_step_direction = (10, 0)
+                if not self.relative_mode:
+                    if symbol == key.UP or symbol == key.W:
+                        self.new_step_direction = (0, 10)
+                    elif symbol == key.DOWN or symbol == key.S:
+                        self.new_step_direction = (0, -10)
+                    elif symbol == key.LEFT or symbol == key.A:
+                        self.new_step_direction = (-10, 0)
+                    elif symbol == key.RIGHT or symbol == key.D:
+                        self.new_step_direction = (10, 0)
+
+                else:
+                    if symbol == key.J:
+                        self.set_new_direction_from_relative("LEFT")
+                    elif symbol == key.K:
+                        self.set_new_direction_from_relative("RIGHT")
 
                 if symbol == key.ESCAPE:
                     self.pause()
@@ -1871,10 +1896,13 @@ if __name__ == '__main__':
     menu_arrow = pyglet.resource.image('textures/interface/menu_arrow.png')
     menu_difficulty = pyglet.resource.image('textures/interface/menu_difficulty.png')
 
+    cross_relative = pyglet.resource.image('textures/interface/cross.png')
+    cross_relative = pyglet.sprite.Sprite(cross_relative, x=420, y=190)
+
     center_image(menu_arrow)
     menu_left = pyglet.sprite.Sprite(menu_left, x=0, y=0)
     menu_arrow2 = pyglet.sprite.Sprite(menu_arrow, x=800, y=500)
-    menu_difficulty = pyglet.sprite.Sprite(menu_difficulty, x=396, y=255)
+    menu_difficulty = pyglet.sprite.Sprite(menu_difficulty, x=396, y=175)
 
     menu_arrow_1 = Animation('textures/interface/menu_arrow.png',
                              377, 405, call_time=0.01, duration=0.06)
