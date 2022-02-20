@@ -280,7 +280,6 @@ class Menu:
         self.last_highlighted_option = self.highlighted_option
 
     def mouse_function(self, x, y, button):
-        # """ if in menu and not clicked anything yet """
         if not self.play_state:
             if 0 < x < 356 and 365 < y < 445:
                 menu_arrow_1.object.position = (377, 405)
@@ -346,6 +345,15 @@ class Menu:
                 self.make_a_sound()
                 if button == mouse.LEFT:
                     self.snake_time(3)
+                    effect.play(effect.enter)
+
+            elif 395 < x < 780 and 175 < y < 253:
+                menu_arrow2.position = (800, 215)
+                self.highlighted_option = 4
+                self.make_a_sound()
+                if button == mouse.LEFT:
+                    stats.data.data['relative_mode'] = not stats.data.data['relative_mode']
+                    stats.data.store_data()
                     effect.play(effect.enter)
 
             # """ if clicked back on the left """
