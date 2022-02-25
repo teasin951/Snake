@@ -19,7 +19,7 @@ correction_factor = 5
 def create(body_file, x, y):
     """ Fill the array with given snake body """
     global body, phase, step, last_x, last_y, last_body, array
-    body = pyglet.resource.image(body_file)
+    body = pyglet.image.load(body_file)
 
     last_x = x
     last_y = y
@@ -30,7 +30,7 @@ def create(body_file, x, y):
 
 def switch(body_file):
     global body, last_body, last_x
-    body = pyglet.resource.image(body_file)
+    body = pyglet.image.load(body_file)
 
     for i in range(30):
         move(i)

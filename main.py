@@ -501,8 +501,10 @@ class Shop:
 
         self.food = pyglet.resource.image('textures/food/{}.png'.format
                                           (stats.data.data['food_in_use']))
-        center_image(self.food)
+
         self.food_for_draw = pyglet.sprite.Sprite(self.food, x=546, y=490)
+        center_image(self.food)
+
         self.scale_food = 0.5
         self.food_for_draw.scale = self.scale_food
 
@@ -519,7 +521,7 @@ class Shop:
         else:
             self.display_body = False
             self.food_for_draw = pyglet.sprite.Sprite(
-                pyglet.resource.image('textures/food/{}.png'.format(new_skin)), x=546, y=490)
+                pyglet.image.load('textures/food/{}.png'.format(new_skin)), x=546, y=490)
             self.food_for_draw.scale = self.scale_food
 
     def move_skins_left(self):
