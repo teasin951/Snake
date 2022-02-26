@@ -796,7 +796,7 @@ class Shop:
 
         """
 
-        animate_snake.create('textures/body/BBS.png', 500, 500)
+        animate_snake.create('textures/body/BBS.png', 505, 510)
         pyglet.clock.schedule_interval(animate_snake.move, 1/30)
 
         for obj in list(self.json["background"]):
@@ -1697,12 +1697,12 @@ class Snake:
         window.set_mouse_visible(True)
         pyglet.clock.unschedule(snake.move)
 
-        media.adjust(0.01)
+        media.adjust(0.10)
 
     def play(self):
         window.active_window = 1
         window.set_mouse_visible(False)
-        media.adjust(100)
+        media.adjust_music_volume()
 
         if self.game_state == 1:
             pyglet.clock.schedule_interval(self.move, self.move_time)

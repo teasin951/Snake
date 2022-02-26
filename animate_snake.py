@@ -16,10 +16,16 @@ body_scale_factor = 0.7
 correction_factor = 5
 
 
+def center_image(image):
+    image.anchor_x = image.width // 2
+    image.anchor_y = image.height // 2
+
+
 def create(body_file, x, y):
     """ Fill the array with given snake body """
     global body, phase, step, last_x, last_y, last_body, array
-    body = pyglet.image.load(body_file)
+    body = pyglet.resource.image(body_file)
+    center_image(body)
 
     last_x = x
     last_y = y
@@ -29,8 +35,9 @@ def create(body_file, x, y):
 
 
 def switch(body_file):
-    global body, last_body, last_x
-    body = pyglet.image.load(body_file)
+    global body, last_body, last_x, phase
+    body = pyglet.resource.image(body_file)
+    center_image(body)
 
     for i in range(30):
         move(i)

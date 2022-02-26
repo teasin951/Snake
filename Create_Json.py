@@ -73,6 +73,10 @@ def create_shop_json(key):
             "BBS": 0,
             "BRD": 1000,
             "BJG": 2000,
+            "BFG": 7000,
+            "BIR": 7000,
+            "BTT": 10000,
+            "BIN": 12000,
             "FBS": 0,
             "FAP": 3000,
             "FCH": 3000
@@ -104,7 +108,8 @@ def create_shop_json(key):
         "background": {
             "IBS": 0,
             "IDF": 5000,
-            "ILR": 6000
+            "ILR": 6000,
+            "IST": 4000,
         }
     }
 
