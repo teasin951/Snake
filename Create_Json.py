@@ -108,8 +108,14 @@ def create_shop_json(key):
         "background": {
             "IBS": 0,
             "IDF": 5000,
-            "ILR": 6000,
-            "IST": 4000,
+            "IDN": 4000,
+            "ISA": 6000,
+            "ILT": 5000,
+            "IDW": 6000,
+            "ILD": 4000,
+            "IST": 3000,
+            "ILR": 3000,
+
         }
     }
 
