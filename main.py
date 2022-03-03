@@ -166,10 +166,11 @@ class Window(pyglet.window.Window):
                 shop.food_for_draw.draw()
 
             shop.background_icons[shop.draw_background_index].draw()
-            shop.shopBatch.draw()
             for i in shop.out_label_batch:
                 for j in i:
                     j.draw()
+
+            shop.shopBatch.draw()
 
         elif self.screen_function == "Stats":
             stats.statsBatch.draw()

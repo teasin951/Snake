@@ -1,3 +1,10 @@
+"""
+
+This creates the beautiful animation of snake in the shop :)
+
+"""
+
+
 import pyglet
 import numpy as np
 
